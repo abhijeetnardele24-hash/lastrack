@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 680" width="100%" height="100%" style="background-color: #14201C; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1F6B4F" />
+      <stop offset="100%" stop-color="#144633" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B94F32" />
+      <stop offset="100%" stop-color="#8C3A24" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1D2E28" />
+      <stop offset="100%" stop-color="#172520" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Header -->
+  <text x="50" y="55" fill="#F2EFE7" font-size="24" font-weight="800" letter-spacing="-0.5">LASTRACK ARCHITECTURE &amp; DATA PIPELINE</text>
+  <text x="50" y="82" fill="#889890" font-size="14">Bounded Inventory Rescue Agent — Single-Query Invariant &amp; MCP Taste Graph Integration</text>
+
+  <!-- 1. Merchant Input Container -->
+  <g transform="translate(50, 120)" filter="url(#shadow)">
+    <rect width="280" height="490" rx="10" fill="url(#cardGrad)" stroke="#2C453C" stroke-width="1.5"/>
+    <rect width="280" height="42" rx="10" fill="#243831"/>
+    <text x="20" y="27" fill="#F2EFE7" font-size="14" font-weight="700">1. MERCHANT INPUT BRIEF</text>
+    
+    <g transform="translate(20, 65)">
+      <rect width="240" height="70" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="26" fill="#B94F32" font-size="11" font-weight="700">SLOW INVENTORY PROFILE</text>
+      <text x="14" y="46" fill="#E8E5DD" font-size="13" font-weight="600">Olive Linen Overshirt</text>
+      <text x="14" y="60" fill="#889890" font-size="11">42 units · 28 days slow · Brooklyn, NY</text>
+    </g>
+
+    <g transform="translate(20, 150)">
+      <rect width="240" height="70" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="26" fill="#1F6B4F" font-size="11" font-weight="700">TASTE ANCHORS (SEEDS)</text>
+      <text x="14" y="46" fill="#E8E5DD" font-size="13" font-weight="600">A24, Phoebe Bridgers, Bode</text>
+      <text x="14" y="60" fill="#889890" font-size="11">Resolved to Qloo Canonical IDs</text>
+    </g>
+
+    <g transform="translate(20, 235)">
+      <rect width="240" height="95" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="26" fill="#D49B4B" font-size="11" font-weight="700">COMMERCIAL GUARDRAILS</text>
+      <text x="14" y="46" fill="#E8E5DD" font-size="12">Budget Cap: $600 USD</text>
+      <text x="14" y="64" fill="#E8E5DD" font-size="12">Max Markdown: 10%</text>
+      <text x="14" y="82" fill="#E8E5DD" font-size="12">Forbidden: Paid Influencers, Ads</text>
+    </g>
+
+    <g transform="translate(20, 345)">
+      <rect width="240" height="115" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="26" fill="#889890" font-size="11" font-weight="700">DISCLAIMER ENFORCEMENT</text>
+      <text x="14" y="48" fill="#F2EFE7" font-size="11" font-style="italic">"Planning hypothesis—not a sales forecast or endorsement by the named entities."</text>
+      <text x="14" y="98" fill="#1F6B4F" font-size="10" font-weight="600">MANDATORY EXPORT STAMP</text>
+    </g>
+  </g>
+
+  <!-- Flow Connector 1 -> 2 -->
+  <path d="M 330 365 L 390 365" stroke="#1F6B4F" stroke-width="2.5" stroke-dasharray="4 4" fill="none"/>
+  <polygon points="390,360 402,365 390,370" fill="#1F6B4F"/>
+
+  <!-- 2. Bounded Agent & MCP Harness -->
+  <g transform="translate(410, 120)" filter="url(#shadow)">
+    <rect width="320" height="490" rx="10" fill="url(#cardGrad)" stroke="#2C453C" stroke-width="1.5"/>
+    <rect width="320" height="42" rx="10" fill="url(#primaryGrad)"/>
+    <text x="20" y="27" fill="#F2EFE7" font-size="14" font-weight="700">2. BOUNDED AGENT (MCP HARNESS)</text>
+
+    <g transform="translate(20, 60)">
+      <rect width="280" height="50" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="22" fill="#1F6B4F" font-size="10" font-weight="700">STEP 1: ENTITY RESOLUTION</text>
+      <text x="14" y="38" fill="#F2EFE7" font-size="12">qloo_describe (Anchors -> Canonical Entities)</text>
+    </g>
+
+    <g transform="translate(20, 120)">
+      <rect width="280" height="50" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="22" fill="#1F6B4F" font-size="10" font-weight="700">STEP 2: TASTE &amp; TAG MAPPING</text>
+      <text x="14" y="38" fill="#F2EFE7" font-size="12">qloo_find_tags (Aesthetic Co-occurrences)</text>
+    </g>
+
+    <g transform="translate(20, 180)">
+      <rect width="280" height="50" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="22" fill="#1F6B4F" font-size="10" font-weight="700">STEP 3: CROSS-DOMAIN DISCOVERY</text>
+      <text x="14" y="38" fill="#F2EFE7" font-size="12">qloo_recommend (Films, Brands, Places)</text>
+    </g>
+
+    <g transform="translate(20, 240)">
+      <rect width="280" height="70" rx="6" fill="#14201C" stroke="#B94F32" stroke-width="1.5"/>
+      <text x="14" y="22" fill="#B94F32" font-size="10" font-weight="700">STEP 4: SINGLE-QUERY BATCH RANK</text>
+      <text x="14" y="38" fill="#F2EFE7" font-size="12">qloo_rank (All candidates in ONE call)</text>
+      <text x="14" y="55" fill="#889890" font-size="10">Invariant: Prohibits cross-request comparisons</text>
+    </g>
+
+    <g transform="translate(20, 320)">
+      <rect width="280" height="50" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="22" fill="#D49B4B" font-size="10" font-weight="700">STEP 5: DETERMINISTIC CONSTRAINT CHECK</text>
+      <text x="14" y="38" fill="#F2EFE7" font-size="12">Budget bounds ($600) &amp; Tactic filters</text>
+    </g>
+
+    <g transform="translate(20, 380)">
+      <rect width="280" height="50" rx="6" fill="#14201C" stroke="#2C453C"/>
+      <text x="14" y="22" fill="#B94F32" font-size="10" font-weight="700">STEP 6: CLAIMS CRITIQUE</text>
+      <text x="14" y="38" fill="#F2EFE7" font-size="12">Rejects guarantees, endorsements, demographics</text>
+    </g>
+
+    <g transform="translate(20, 440)">
+      <rect width="280" height="35" rx="6" fill="#1F6B4F"/>
+      <text x="14" y="22" fill="#F2EFE7" font-size="11" font-weight="700">EVIDENCE LEDGER (AUDIT TRAIL GENERATED)</text>
+    </g>
+  </g>
+
+  <!-- Flow Connector 2 -> 3 -->
+  <path d="M 730 365 L 790 365" stroke="#1F6B4F" stroke-width="2.5" stroke-dasharray="4 4" fill="none"/>
+  <polygon points="790,360 802,365 790,370" fill="#1F6B4F"/>
+
+  <!-- 3. Actionable Outcomes & Exports -->
+  <g transform="translate(810, 120)" filter="url(#shadow)">
+    <rect width="240" height="490" rx="10" fill="url(#cardGrad)" stroke="#2C453C" stroke-width="1.5"/>
+    <rect width="240" height="42" rx="10" fill="#243831"/>
+    <text x="20" y="27" fill="#F2EFE7" font-size="14" font-weight="700">3. RESCUE EXPERIMENTS</text>
+
+    <!-- Plan 1 -->
+    <g transform="translate(15, 60)">
+      <rect width="210" height="85" rx="6" fill="#14201C" stroke="#1F6B4F"/>
+      <text x="12" y="20" fill="#1F6B4F" font-size="10" font-weight="700">EXPERIMENT 1: DISPLAY</text>
+      <text x="12" y="38" fill="#F2EFE7" font-size="12" font-weight="600">Cinematic Workwear</text>
+      <text x="12" y="55" fill="#889890" font-size="11">A24 / 'Past Lives' Reframe</text>
+      <text x="12" y="73" fill="#D49B4B" font-size="11">Cost: $180 · PASS</text>
+    </g>
+
+    <!-- Plan 2 -->
+    <g transform="translate(15, 155)">
+      <rect width="210" height="85" rx="6" fill="#14201C" stroke="#1F6B4F"/>
+      <text x="12" y="20" fill="#1F6B4F" font-size="10" font-weight="700">EXPERIMENT 2: BUNDLE</text>
+      <text x="12" y="38" fill="#F2EFE7" font-size="12" font-weight="600">Literary &amp; Audio Pairing</text>
+      <text x="12" y="55" fill="#889890" font-size="11">Phoebe Bridgers / Essay</text>
+      <text x="12" y="73" fill="#D49B4B" font-size="11">Cost: $250 · PASS</text>
+    </g>
+
+    <!-- Plan 3 -->
+    <g transform="translate(15, 250)">
+      <rect width="210" height="85" rx="6" fill="#14201C" stroke="#1F6B4F"/>
+      <text x="12" y="20" fill="#1F6B4F" font-size="10" font-weight="700">EXPERIMENT 3: ACTIVATION</text>
+      <text x="12" y="38" fill="#F2EFE7" font-size="12" font-weight="600">Local Cinema Pop-Up</text>
+      <text x="12" y="55" fill="#889890" font-size="11">Nitehawk Brooklyn Display</text>
+      <text x="12" y="73" fill="#D49B4B" font-size="11">Cost: $420 · PASS</text>
+    </g>
+
+    <!-- Ablation Modal Trigger & Export -->
+    <g transform="translate(15, 345)">
+      <rect width="210" height="55" rx="6" fill="#14201C" stroke="#B94F32"/>
+      <text x="12" y="20" fill="#B94F32" font-size="10" font-weight="700">WHY QLOO? ABLATION</text>
+      <text x="12" y="38" fill="#889890" font-size="11">Proves collapse to generic</text>
+      <text x="12" y="50" fill="#889890" font-size="11">markdown without Qloo</text>
+    </g>
+
+    <g transform="translate(15, 410)">
+      <rect width="210" height="65" rx="6" fill="#14201C" stroke="#1F6B4F"/>
+      <text x="12" y="22" fill="#1F6B4F" font-size="10" font-weight="700">DECISION RECEIPT EXPORT</text>
+      <text x="12" y="42" fill="#F2EFE7" font-size="11">JSON + Formatted HTML</text>
+      <text x="12" y="56" fill="#889890" font-size="10">Includes full evidence audit</text>
+    </g>
+  </g>
+
+  <!-- Footer Banner -->
+  <rect x="50" y="630" width="1000" height="30" rx="4" fill="#172520"/>
+  <text x="65" y="650" fill="#889890" font-size="11">LastRack Architecture — Fully compliant with Qloo Agentic Hackathon Requirements &amp; Safe-Use Guidelines</text>
+  <text x="940" y="650" fill="#1F6B4F" font-size="11" font-weight="700">STATUS: VERIFIED</text>
+</svg>

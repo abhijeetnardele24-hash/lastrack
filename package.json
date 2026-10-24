@@ -1,0 +1,37 @@
+{
+  "name": "lastrack-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LastRack — Turn slow stock into a culturally grounded experiment before cutting the price.",
+  "workspaces": [
+    "packages/contracts",
+    "packages/domain",
+    "packages/fixtures",
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=apps/server\" \"npm run dev --workspace=apps/web\"",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint \"**/*.{ts,tsx,js,jsx}\"",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "security-scan": "node scripts/security-scan.cjs",
+    "audit": "npm audit --omit=dev --audit-level=high"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.19.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.9",
+    "@vitest/coverage-v8": "^2.1.9"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

@@ -1,0 +1,111 @@
+:root {
+  --canvas: #F2EFE7;
+  --canvas-surface: #E8E5DD;
+  --canvas-elevated: #FAF8F5;
+  --ink: #14201C;
+  --ink-secondary: #4D5B55;
+  --ink-muted: #7A8982;
+  --rule: #B9B2A5;
+  --rule-light: #D5CEBF;
+  --signal-rescue: #B94F32;
+  --signal-rescue-light: #FDE8E4;
+  --signal-evidence: #1F6B4F;
+  --signal-evidence-light: #E2F3EC;
+  --signal-caution: #A76D14;
+  --signal-caution-light: #FEF3D6;
+  
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  
+  --shadow-subtle: 0 1px 3px rgba(20, 32, 28, 0.05);
+  --shadow-elevated: 0 4px 12px rgba(20, 32, 28, 0.08);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--canvas);
+  color: var(--ink);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular Numerals for Inventory & Budgets */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Serif Headings */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+/* Accessible Focus Outlines */
+:focus-visible {
+  outline: 2px solid var(--signal-evidence);
+  outline-offset: 2px;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Responsive Container */
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+/* Badges */
+.badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: var(--radius-sm);
+}
+
+.badge-live {
+  background-color: var(--signal-evidence);
+  color: #FFFFFF;
+}
+
+.badge-fixture {
+  background-color: var(--signal-caution);
+  color: #FFFFFF;
+}
+
+.badge-degraded {
+  background-color: var(--signal-rescue);
+  color: #FFFFFF;
+}

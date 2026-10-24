@@ -1,0 +1,21 @@
+services:
+  lastrack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lastrack:latest
+    container_name: lastrack-app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      - QLOO_API_KEY=${QLOO_API_KEY:-}
+      - CLIENT_ORIGIN=http://localhost:5173
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

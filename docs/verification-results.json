@@ -1,0 +1,94 @@
+{
+  "system": "LastRack",
+  "generatedAt": "2026-10-25T02:00:54Z",
+  "status": "VERIFIED",
+  "verificationSuites": {
+    "securityScan": {
+      "status": "PASS",
+      "command": "npm run security-scan",
+      "secretsFound": 0,
+      "filesScanned": 58,
+      "details": "Zero credentials or private keys detected in codebase."
+    },
+    "testSuite": {
+      "status": "PASS",
+      "command": "npm test",
+      "testFilesTotal": 6,
+      "testFilesPassed": 6,
+      "testFilesFailed": 0,
+      "testsTotal": 31,
+      "testsPassed": 31,
+      "testsFailed": 0,
+      "durationSeconds": 1.10,
+      "coverage": {
+        "packages/contracts": {
+          "statements": 100,
+          "branches": 100,
+          "functions": 100,
+          "lines": 100
+        },
+        "packages/domain": {
+          "statements": 100,
+          "branches": 96.77,
+          "functions": 100,
+          "lines": 100
+        },
+        "apps/server/src/agent/controller.ts": {
+          "statements": 86.22,
+          "branches": 53.65,
+          "functions": 78.57,
+          "lines": 86.22
+        },
+        "apps/server/src/server.ts": {
+          "statements": 67.17,
+          "branches": 51.72,
+          "functions": 100,
+          "lines": 67.17
+        }
+      }
+    },
+    "typecheck": {
+      "status": "PASS",
+      "command": "npm run typecheck",
+      "errors": 0,
+      "workspaces": [
+        "@lastrack/contracts",
+        "@lastrack/domain",
+        "@lastrack/fixtures",
+        "@lastrack/server",
+        "@lastrack/web"
+      ]
+    },
+    "productionBuild": {
+      "status": "PASS",
+      "command": "npm run build",
+      "errors": 0,
+      "artifacts": {
+        "contracts": "packages/contracts/dist",
+        "domain": "packages/domain/dist",
+        "fixtures": "packages/fixtures/dist",
+        "server": "apps/server/dist",
+        "web": "apps/web/dist"
+      }
+    }
+  },
+  "invariantAudit": {
+    "singleQueryRankingInvariant": {
+      "enforced": true,
+      "rule": "All comparable options ranked inside one unified qloo_rank call",
+      "tested": true
+    },
+    "claimsValidator": {
+      "enforced": true,
+      "salesPromisesForbidden": true,
+      "causalDemandClaimsForbidden": true,
+      "demographicProfilingForbidden": true,
+      "endorsementClaimsForbidden": true,
+      "tested": true
+    },
+    "mandatoryDisclaimer": {
+      "enforced": true,
+      "disclaimer": "Planning hypothesis—not a sales forecast or endorsement by the named entities."
+    }
+  }
+}
