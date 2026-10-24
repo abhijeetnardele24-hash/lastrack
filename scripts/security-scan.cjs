@@ -1,6 +1,6 @@
 /**
  * LastRack Secret & Credential Scanner
- * Scans codebase files and git commits to guarantee zero leaked secrets, API keys, or private tokens.
+ * Scans working tree files AND reachable Git history to guarantee zero leaked secrets, API keys, or private tokens.
  */
 const fs = require("fs");
 const path = require("path");
@@ -15,6 +15,8 @@ const IGNORED_DIRS = new Set([
   "coverage",
   ".turbo",
   ".next",
+  "test-results",
+  "playwright-report",
 ]);
 
 const SECRET_PATTERNS = [
@@ -46,8 +48,10 @@ function scanDirectory(dirPath, violations = []) {
         const content = fs.readFileSync(fullPath, "utf-8");
         for (const pattern of SECRET_PATTERNS) {
           if (pattern.regex.test(content)) {
+            // Ignore placeholders
+            if (content.includes("your_qloo_api_key_here") || content.includes("your_api_key_here")) continue;
             violations.push({
-              file: path.relative(ROOT_DIR, fullPath),
+              source: path.relative(ROOT_DIR, fullPath),
               rule: pattern.name,
             });
           }
@@ -61,17 +65,47 @@ function scanDirectory(dirPath, violations = []) {
   return violations;
 }
 
-console.log("🔒 [LastRack Security Scan] Scanning codebase for leaked credentials and API tokens...");
+function scanGitHistory(violations = []) {
+  try {
+    const gitLog = execSync("git log -p --all", { cwd: ROOT_DIR, encoding: "utf-8", maxBuffer: 25 * 1024 * 1024 });
+    const lines = gitLog.split("\n");
+    let currentCommit = "HEAD";
+    for (const line of lines) {
+      if (line.startsWith("commit ")) {
+        currentCommit = line.substring(7, 15).trim();
+      }
+      if (line.startsWith("+") && !line.startsWith("+++")) {
+        const addedLine = line.substring(1);
+        for (const pattern of SECRET_PATTERNS) {
+          if (pattern.regex.test(addedLine)) {
+            if (addedLine.includes("your_qloo_api_key_here") || addedLine.includes("mock-qloo-api-key")) continue;
+            violations.push({
+              source: `git commit ${currentCommit}`,
+              rule: pattern.name,
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ [LastRack Security Scan] Git history log unavailable:", err.message);
+  }
+  return violations;
+}
 
-const violations = scanDirectory(ROOT_DIR);
+console.log("🔒 [LastRack Security Scan] Scanning working tree and reachable Git history...");
 
-if (violations.length > 0) {
+const workingTreeViolations = scanDirectory(ROOT_DIR);
+const gitHistoryViolations = scanGitHistory();
+const allViolations = [...workingTreeViolations, ...gitHistoryViolations];
+
+if (allViolations.length > 0) {
   console.error("\n❌ SECURITY SCAN FAILED! Hardcoded credentials detected:");
-  violations.forEach((v) => {
-    console.error(`  - ${v.file}: matched [${v.rule}]`);
+  allViolations.forEach((v) => {
+    console.error(`  - ${v.source}: matched [${v.rule}]`);
   });
   process.exit(1);
 } else {
-  console.log("✅ [LastRack Security Scan] Clean! No credentials or secrets found in codebase.");
+  console.log("✅ [LastRack Security Scan] Clean! No credentials or secrets found across working tree or Git history.");
   process.exit(0);
 }

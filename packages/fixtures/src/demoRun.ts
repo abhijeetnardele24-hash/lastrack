@@ -137,6 +137,7 @@ export const DEMO_ACTIVATION_PLANS: ActivationPlan[] = [
       withinQueryRank: 1,
       totalRankedInBatch: 6,
       batchRankCallId: "qloo_req_rank_batch_9921",
+      rankDigest: "sha256:d84f92a3bc1e07b461c9201f99c824e8a71d6205739c9f28249826a7e28b8f21",
     },
   },
   {
@@ -163,6 +164,7 @@ export const DEMO_ACTIVATION_PLANS: ActivationPlan[] = [
       withinQueryRank: 2,
       totalRankedInBatch: 6,
       batchRankCallId: "qloo_req_rank_batch_9921",
+      rankDigest: "sha256:d84f92a3bc1e07b461c9201f99c824e8a71d6205739c9f28249826a7e28b8f21",
     },
   },
   {
@@ -189,6 +191,7 @@ export const DEMO_ACTIVATION_PLANS: ActivationPlan[] = [
       withinQueryRank: 3,
       totalRankedInBatch: 6,
       batchRankCallId: "qloo_req_rank_batch_9921",
+      rankDigest: "sha256:d84f92a3bc1e07b461c9201f99c824e8a71d6205739c9f28249826a7e28b8f21",
     },
   },
 ];

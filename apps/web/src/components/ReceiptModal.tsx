@@ -1,6 +1,6 @@
 import React from "react";
 import { ActivationPlan, InventoryBrief, EvidenceNode, MANDATORY_DISCLAIMER } from "@lastrack/contracts";
-import { X, Printer, Download, ShieldCheck, CheckSquare } from "lucide-react";
+import { X, Printer, Download, ShieldCheck } from "lucide-react";
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -19,6 +19,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   evidence,
   runId,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !plan) return null;
 
   const linkedEvidence = evidence.filter((e) => plan.evidenceNodeIds.includes(e.id));
@@ -62,6 +73,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       onClick={onClose}
     >
       <div
+        id="receipt-modal"
+        data-testid="receipt-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Approved Decision Receipt"
         style={{
           width: "100%",
           maxWidth: "800px",
@@ -128,7 +144,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <Download size={13} /> JSON
             </button>
 
-            <button onClick={onClose} style={{ padding: "4px", color: "var(--ink-muted)", marginLeft: "4px" }}>
+            <button onClick={onClose} aria-label="Close receipt modal" style={{ padding: "4px", color: "var(--ink-muted)", marginLeft: "4px" }}>
               <X size={20} />
             </button>
           </div>
@@ -186,6 +202,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Audit & Integrity Digest */}
+        {plan.scoreContext?.rankDigest && (
+          <div style={{ marginBottom: "16px", padding: "10px", backgroundColor: "var(--canvas-surface)", borderRadius: "var(--radius-sm)", border: "1px solid var(--rule-light)", fontSize: "11px" }}>
+            <span style={{ fontWeight: 700, color: "var(--ink-secondary)" }}>SHA-256 Digest: </span>
+            <code style={{ fontSize: "10px" }}>{plan.scoreContext.rankDigest}</code>
+          </div>
+        )}
 
         {/* Mandatory Legal & Ethical Notice */}
         <div style={{

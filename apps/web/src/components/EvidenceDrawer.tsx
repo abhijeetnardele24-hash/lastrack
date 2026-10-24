@@ -1,6 +1,6 @@
 import React from "react";
 import { EvidenceNode } from "@lastrack/contracts";
-import { X, ShieldCheck, Database, FileText, Sparkles } from "lucide-react";
+import { X, Database, FileText, Sparkles } from "lucide-react";
 
 interface EvidenceDrawerProps {
   isOpen: boolean;
@@ -15,6 +15,17 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
   evidence,
   highlightedNodeId,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const getClassIcon = (cls: string) => {
@@ -44,6 +55,11 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
       onClick={onClose}
     >
       <div
+        id="evidence-drawer"
+        data-testid="evidence-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Supporting Evidence Ledger"
         style={{
           width: "100%",
           maxWidth: "540px",
@@ -73,6 +89,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
             onClick={onClose}
             style={{ padding: "4px", color: "var(--ink-muted)", borderRadius: "var(--radius-sm)" }}
             title="Close Drawer"
+            aria-label="Close Drawer"
           >
             <X size={20} />
           </button>

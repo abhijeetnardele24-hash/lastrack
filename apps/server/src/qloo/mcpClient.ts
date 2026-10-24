@@ -1,19 +1,42 @@
 import { spawn, ChildProcess } from "child_process";
 import { createHash } from "crypto";
+import { fileURLToPath } from "url";
+import path from "path";
 import { SourceMode } from "@lastrack/contracts";
+
+export interface CanonicalQlooError {
+  code: string;
+  layer?: string;
+  retryable: boolean;
+  recovery?: string;
+}
+
+export interface CanonicalWorkflowExecution {
+  transport: string;
+  transport_name?: string;
+  correlation_id: string;
+  duration_ms: number;
+}
+
+export interface CanonicalProvenance {
+  tool: string;
+  requestId: string;
+  sourceMode: SourceMode;
+  timestamp: string;
+  endpoint?: string;
+  correlationId?: string;
+  cached?: boolean;
+}
 
 export interface QlooToolResult<T = any> {
   status: "ok" | "empty" | "needs_input" | "partial" | "degraded" | "error";
+  summary?: string;
   data: T;
-  provenance: {
-    tool: string;
-    requestId: string;
-    sourceMode: SourceMode;
-    timestamp: string;
-    cached?: boolean;
-  };
-  error?: string;
-  isRetryable?: boolean;
+  results: any[];
+  resultCount: number;
+  error?: CanonicalQlooError;
+  execution?: CanonicalWorkflowExecution;
+  provenance: CanonicalProvenance;
 }
 
 interface PendingRequest {
@@ -24,7 +47,18 @@ interface PendingRequest {
 
 interface CacheEntry {
   data: any;
+  results: any[];
+  resultCount: number;
+  summary?: string;
+  sourceMode: SourceMode;
   expiresAt: number;
+}
+
+export interface CapabilitiesMetadata {
+  contractVersion: string;
+  contractChecksum: string;
+  ready: boolean;
+  supportedOperations: string[];
 }
 
 export class QlooMcpClient {
@@ -33,42 +67,68 @@ export class QlooMcpClient {
   private messageBuffer = "";
   private requestCounter = 0;
   private cache = new Map<string, CacheEntry>();
-  private isInitializing = false;
   private initPromise: Promise<boolean> | null = null;
+  private mcpReady = false;
+  private capabilities: CapabilitiesMetadata | null = null;
   private readonly apiKey: string | undefined;
   private readonly ttlMs: number;
+  private readonly customBinPath?: string;
 
-  constructor(apiKey?: string, ttlSeconds = 300) {
+  constructor(apiKey?: string, ttlSeconds = 300, customBinPath?: string) {
     this.apiKey = apiKey || process.env.QLOO_API_KEY;
     this.ttlMs = ttlSeconds * 1000;
+    this.customBinPath = customBinPath;
   }
 
   public isConfigured(): boolean {
     return Boolean(this.apiKey && this.apiKey.trim().length > 0);
   }
 
+  public isReady(): boolean {
+    return this.mcpReady;
+  }
+
+  public getCapabilities(): CapabilitiesMetadata | null {
+    return this.capabilities;
+  }
+
+  private resolveHarnessBinPath(): string {
+    if (this.customBinPath) {
+      return this.customBinPath;
+    }
+    try {
+      const indexUrl = import.meta.resolve("@qloo/qloo-harness");
+      const indexPath = fileURLToPath(indexUrl);
+      return path.resolve(path.dirname(indexPath), "bin.js");
+    } catch {
+      // Fallback relative search
+      return path.resolve(process.cwd(), "node_modules/@qloo/qloo-harness/dist/bin.js");
+    }
+  }
+
   public async initialize(): Promise<boolean> {
-    if (this.childProcess) return true;
+    if (this.mcpReady && this.childProcess) return true;
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
       if (!this.isConfigured()) {
-        console.warn("[Qloo MCP Client] No QLOO_API_KEY provided. Operating in DEMO_FIXTURE mode.");
+        this.mcpReady = false;
         return false;
       }
 
+      const binPath = this.resolveHarnessBinPath();
+
       try {
-        console.log("[Qloo MCP Client] Spawning official @qloo/qloo-harness MCP child process...");
-        const env = {
+        const env: NodeJS.ProcessEnv = {
           ...process.env,
           QLOO_API_KEY: this.apiKey,
         };
 
-        // Spawn qloo mcp using node or npx
-        this.childProcess = spawn("npx", ["@qloo/qloo-harness", "qloo", "mcp"], {
+        // Spawn canonical executable with single "mcp" argument directly via node
+        this.childProcess = spawn(process.execPath, [binPath, "mcp"], {
           env,
           stdio: ["pipe", "pipe", "pipe"],
-          shell: process.platform === "win32",
+          shell: false,
         });
 
         this.childProcess.stdout?.on("data", (chunk: Buffer) => {
@@ -76,40 +136,63 @@ export class QlooMcpClient {
         });
 
         this.childProcess.stderr?.on("data", (chunk: Buffer) => {
-          const errText = chunk.toString();
-          // Filter non-fatal diagnostics
-          if (!errText.includes("DeprecationWarning")) {
-            console.error(`[Qloo MCP Stderr]: ${errText.trim()}`);
+          const text = chunk.toString();
+          if (!text.includes("DeprecationWarning")) {
+            // Keep stderr clean without logging raw keys
+            const redacted = text.replace(/(QLOO_API_KEY=)[^\s]+/g, "$1[REDACTED]");
+            console.error(`[Qloo MCP Process Log]: ${redacted.trim()}`);
           }
         });
 
         this.childProcess.on("exit", (code, signal) => {
-          console.warn(`[Qloo MCP Client] Child process exited with code ${code}, signal ${signal}.`);
+          this.mcpReady = false;
           this.childProcess = null;
-          // Reject all pending requests
           for (const [id, req] of this.pendingRequests.entries()) {
             clearTimeout(req.timer);
-            req.reject(new Error(`MCP process exited unexpectedly (code ${code})`));
+            req.reject(new Error(`MCP child process exited (code ${code}, signal ${signal})`));
             this.pendingRequests.delete(id);
           }
         });
 
-        // Initialize handshake
-        const initResult = await this.callJsonRpc("initialize", {
+        // 1. Send initialize request
+        const initResponse = await this.callJsonRpc("initialize", {
           protocolVersion: "2024-11-05",
-          capabilities: { tools: {} },
+          capabilities: {},
           clientInfo: { name: "LastRack", version: "1.0.0" },
-        }, 5000).catch((e) => {
-          console.warn("[Qloo MCP Client] Handshake warning (will continue if supported):", e.message);
-          return null;
-        });
+        }, 6000);
 
-        console.log("[Qloo MCP Client] Handshake complete.");
+        if (!initResponse || !initResponse.protocolVersion) {
+          throw new Error("Invalid MCP initialize handshake response from harness.");
+        }
+
+        // 2. Send notifications/initialized
+        this.sendNotification("notifications/initialized", {});
+
+        // 3. Inspect capabilities & contract checksum
+        const capResult = await this.callJsonRpc("tools/call", {
+          name: "qloo_capabilities",
+          arguments: {},
+        }, 6000);
+
+        const capData = capResult?.structuredContent || this.extractStructuredContent(capResult);
+        if (capData) {
+          this.capabilities = {
+            contractVersion: capData.contract_version || "1.0.0",
+            contractChecksum: capData.contract_checksum || "",
+            ready: Boolean(capData.adapter?.ready),
+            supportedOperations: capData.adapter?.supported_operation_ids || [],
+          };
+        }
+
+        this.mcpReady = true;
         return true;
       } catch (err: any) {
-        console.error("[Qloo MCP Client] Failed to spawn MCP child process:", err.message);
-        this.childProcess = null;
-        return false;
+        this.mcpReady = false;
+        if (this.childProcess) {
+          this.childProcess.kill();
+          this.childProcess = null;
+        }
+        throw new Error(`MCP Initialization failed: ${err.message}`);
       } finally {
         this.initPromise = null;
       }
@@ -121,86 +204,210 @@ export class QlooMcpClient {
   public async callTool<T = any>(
     toolName: string,
     args: Record<string, any>,
-    timeoutMs = 8000
+    options: {
+      timeoutMs?: number;
+      allowFixture?: boolean;
+      correlationId?: string;
+    } = {}
   ): Promise<QlooToolResult<T>> {
-    const requestId = `qloo_req_${toolName}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const timeoutMs = options.timeoutMs ?? 10000;
+    const correlationId = options.correlationId || `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const cacheKey = this.computeCacheKey(toolName, args);
 
-    // 1. Check TTL cache
+    // 1. Cache hit check
     const cached = this.cache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
+      const mode = cached.sourceMode === "DEMO_FIXTURE" ? "DEMO_FIXTURE" : "CACHED_QLOO";
       return {
         status: "ok",
-        data: cached.data,
+        summary: cached.summary,
+        data: cached.data as T,
+        results: cached.results,
+        resultCount: cached.resultCount,
         provenance: {
           tool: toolName,
-          requestId,
-          sourceMode: "CACHED_QLOO",
+          requestId: correlationId,
+          sourceMode: mode,
           timestamp: new Date().toISOString(),
           cached: true,
+          correlationId,
         },
       };
     }
 
-    // 2. If no API key is configured, fallback to schema-valid fixture
+    // 2. Explicit DEMO_FIXTURE path (when no API key is configured or fixture explicitly allowed)
     if (!this.isConfigured()) {
-      return this.getMockFixtureResult<T>(toolName, args, requestId);
-    }
-
-    // 3. Ensure process initialized
-    const isReady = await this.initialize();
-    if (!isReady || !this.childProcess) {
-      return this.getMockFixtureResult<T>(toolName, args, requestId);
-    }
-
-    // 4. Execute over MCP with timeout
-    try {
-      const response = await this.callJsonRpc(
-        "tools/call",
-        { name: toolName, arguments: args },
-        timeoutMs
-      );
-
-      // Parse MCP tool response content
-      let parsedData: any = response;
-      if (response && Array.isArray(response.content)) {
-        const textBlock = response.content.find((c: any) => c.type === "text");
-        if (textBlock && typeof textBlock.text === "string") {
-          try {
-            parsedData = JSON.parse(textBlock.text);
-          } catch {
-            parsedData = textBlock.text;
-          }
-        }
+      if (options.allowFixture) {
+        const fixtureRes = this.getMockFixtureResult<T>(toolName, args, correlationId);
+        this.cache.set(cacheKey, {
+          data: fixtureRes.data,
+          results: fixtureRes.results,
+          resultCount: fixtureRes.resultCount,
+          summary: fixtureRes.summary,
+          sourceMode: "DEMO_FIXTURE",
+          expiresAt: Date.now() + this.ttlMs,
+        });
+        return fixtureRes;
       }
-
-      // Cache successful response
-      this.cache.set(cacheKey, {
-        data: parsedData,
-        expiresAt: Date.now() + this.ttlMs,
-      });
-
       return {
-        status: "ok",
-        data: parsedData,
+        status: "error",
+        data: null as any,
+        results: [],
+        resultCount: 0,
+        error: {
+          code: "QLOO_AUTH",
+          retryable: false,
+          recovery: "Set QLOO_API_KEY environment variable to enable live MCP tool execution.",
+        },
         provenance: {
           tool: toolName,
-          requestId,
-          sourceMode: "LIVE_QLOO",
+          requestId: correlationId,
+          sourceMode: "DEMO_FIXTURE",
           timestamp: new Date().toISOString(),
+          correlationId,
         },
       };
-    } catch (err: any) {
-      console.error(`[Qloo MCP Tool ${toolName} Error]:`, err.message);
-      // Fallback gracefully to demo fixture with DEGRADED status
-      const fallback = this.getMockFixtureResult<T>(toolName, args, requestId);
-      return {
-        ...fallback,
-        status: "degraded",
-        error: err.message,
-        isRetryable: err.message?.includes("timeout") || err.message?.includes("rate"),
-      };
     }
+
+    // 3. Ensure live MCP process is initialized
+    await this.initialize();
+
+    // 4. Bounded execution with retry if retryable: true
+    let attempt = 0;
+    const maxAttempts = 3;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        const response = await this.callJsonRpc(
+          "tools/call",
+          { name: toolName, arguments: args },
+          timeoutMs
+        );
+
+        const structured = response?.structuredContent || this.extractStructuredContent(response);
+
+        if (!structured) {
+          throw new Error(`MCP tool "${toolName}" returned empty response.`);
+        }
+
+        const isErrorStatus = structured.status === "error" || response?.isError;
+        if (isErrorStatus) {
+          const errObj: CanonicalQlooError = structured.error || {
+            code: "TOOL_ERROR",
+            retryable: false,
+            recovery: structured.summary || "Inspect tool arguments and parameters.",
+          };
+
+          // Retry only if retryable is explicitly true
+          if (errObj.retryable && attempt < maxAttempts) {
+            const jitterMs = 100 + Math.floor(Math.random() * 150);
+            const backoffMs = Math.pow(2, attempt) * 200 + jitterMs;
+            await new Promise((r) => setTimeout(r, backoffMs));
+            continue;
+          }
+
+          return {
+            status: "error",
+            summary: structured.summary,
+            data: structured as T,
+            results: structured.results || [],
+            resultCount: structured.result_count ?? 0,
+            error: errObj,
+            execution: structured.execution,
+            provenance: {
+              tool: toolName,
+              requestId: correlationId,
+              sourceMode: "LIVE_QLOO",
+              timestamp: new Date().toISOString(),
+              correlationId: structured.execution?.correlation_id || correlationId,
+            },
+          };
+        }
+
+        // Success response
+        const normalizedResults = Array.isArray(structured.results) ? structured.results : [];
+        const resultCount = structured.result_count ?? normalizedResults.length;
+
+        // Populate TTL cache
+        this.cache.set(cacheKey, {
+          data: structured,
+          results: normalizedResults,
+          resultCount,
+          summary: structured.summary,
+          sourceMode: "LIVE_QLOO",
+          expiresAt: Date.now() + this.ttlMs,
+        });
+
+        return {
+          status: structured.status || "ok",
+          summary: structured.summary,
+          data: structured as T,
+          results: normalizedResults,
+          resultCount,
+          execution: structured.execution,
+          provenance: {
+            tool: toolName,
+            requestId: correlationId,
+            sourceMode: "LIVE_QLOO",
+            timestamp: new Date().toISOString(),
+            correlationId: structured.execution?.correlation_id || correlationId,
+          },
+        };
+      } catch (err: any) {
+        if (attempt >= maxAttempts) {
+          return {
+            status: "error",
+            data: null as any,
+            results: [],
+            resultCount: 0,
+            error: {
+              code: "MCP_TRANSPORT_ERROR",
+              retryable: false,
+              recovery: err.message,
+            },
+            provenance: {
+              tool: toolName,
+              requestId: correlationId,
+              sourceMode: "LIVE_QLOO",
+              timestamp: new Date().toISOString(),
+              correlationId,
+            },
+          };
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+
+    return {
+      status: "error",
+      data: null as any,
+      results: [],
+      resultCount: 0,
+      error: { code: "UNKNOWN_ERROR", retryable: false },
+      provenance: {
+        tool: toolName,
+        requestId: correlationId,
+        sourceMode: "LIVE_QLOO",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  private extractStructuredContent(response: any): any {
+    if (!response) return null;
+    if (response.structuredContent) return response.structuredContent;
+    if (Array.isArray(response.content)) {
+      const textBlock = response.content.find((c: any) => c.type === "text");
+      if (textBlock && typeof textBlock.text === "string") {
+        try {
+          return JSON.parse(textBlock.text);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return response;
   }
 
   private callJsonRpc(method: string, params: any, timeoutMs: number): Promise<any> {
@@ -234,6 +441,20 @@ export class QlooMcpClient {
     });
   }
 
+  private sendNotification(method: string, params: any): void {
+    if (!this.childProcess || !this.childProcess.stdin) return;
+    const payload = JSON.stringify({
+      jsonrpc: "2.0",
+      method,
+      params,
+    }) + "\n";
+    try {
+      this.childProcess.stdin.write(payload);
+    } catch {
+      // Ignored for notifications
+    }
+  }
+
   private handleStdout(data: string) {
     this.messageBuffer += data;
     const lines = this.messageBuffer.split("\n");
@@ -255,8 +476,8 @@ export class QlooMcpClient {
             resolve(msg.result);
           }
         }
-      } catch (parseErr) {
-        // Not a JSON-RPC message line (could be logging from harness)
+      } catch {
+        // Non-JSON line from process output
       }
     }
   }
@@ -267,81 +488,98 @@ export class QlooMcpClient {
   }
 
   private getMockFixtureResult<T>(tool: string, args: any, requestId: string): QlooToolResult<T> {
-    let mockData: any = {};
+    let mockResults: any[] = [];
+    let summary = "Synthetic fixture data";
 
     switch (tool) {
-      case "qloo_describe":
-        mockData = {
-          entityId: `ent_${String(args.name || "item").toLowerCase().replace(/\s+/g, "_")}_001`,
-          name: args.name || "Unknown Anchor",
-          entityType: args.entityType || "brand",
-          description: "High-affinity cultural anchor entity resolved from Qloo taste graph.",
-          confidence: 0.96,
-        };
+      case "qloo_describe": {
+        const entityName = String(args.entity || "Unknown");
+        mockResults = [
+          {
+            entity_id: `ent_fix_${entityName.toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
+            name: entityName,
+            type: args.type || "brand",
+            description: `Demonstration entity record for ${entityName}`,
+          },
+        ];
+        summary = `Resolved fixture for ${entityName}`;
         break;
+      }
 
-      case "qloo_find_tags":
-      case "qloo_entity_tags":
-        mockData = {
-          tags: ["archive fashion", "cinematic nostalgia", "folk melancholia", "mid-century workwear"],
-        };
+      case "qloo_find_tags": {
+        mockResults = [
+          { tag_urn: "tag:aesthetic:archive_fashion", name: "archive fashion" },
+          { tag_urn: "tag:aesthetic:cinematic_nostalgia", name: "cinematic nostalgia" },
+          { tag_urn: "tag:aesthetic:folk_melancholia", name: "folk melancholia" },
+          { tag_urn: "tag:aesthetic:mid_century_workwear", name: "mid-century workwear" },
+        ];
+        summary = "Discovered 4 demonstration aesthetic tags";
         break;
+      }
 
-      case "qloo_recommend":
-        mockData = {
-          recommendations: [
-            { entityId: "ent_past_lives_010", name: "Past Lives", category: "film", score: 0.92 },
-            { entityId: "ent_toast_uk_011", name: "Toast UK", category: "brand", score: 0.89 },
-            { entityId: "ent_margaret_howell_012", name: "Margaret Howell", category: "brand", score: 0.85 },
-          ],
-        };
+      case "qloo_recommend": {
+        const targetType = args.target_type || "brand";
+        if (targetType === "movie") {
+          mockResults = [
+            { entity_id: "ent_fix_film_1", name: "Past Lives", type: "movie", score: 0.92, summary: "Muted romantic drama exploring fate and identity" },
+            { entity_id: "ent_fix_film_2", name: "Aftersun", type: "movie", score: 0.88, summary: "Reflective summer memory aesthetic" },
+          ];
+        } else if (targetType === "brand") {
+          mockResults = [
+            { entity_id: "ent_fix_brand_1", name: "Toast UK", type: "brand", score: 0.89, summary: "Thoughtful garments crafted in natural materials" },
+            { entity_id: "ent_fix_brand_2", name: "Margaret Howell", type: "brand", score: 0.86, summary: "Timeless British utilitarian design" },
+          ];
+        } else if (targetType === "place") {
+          mockResults = [
+            { entity_id: "ent_fix_place_1", name: "Nitehawk Cinema", type: "place", score: 0.87, location: "Williamsburg, Brooklyn" },
+            { entity_id: "ent_fix_place_2", name: "Word Bookstore", type: "place", score: 0.84, location: "Greenpoint, Brooklyn" },
+          ];
+        } else {
+          mockResults = [
+            { entity_id: "ent_fix_artist_1", name: "Phoebe Bridgers", type: "artist", score: 0.91 },
+            { entity_id: "ent_fix_artist_2", name: "Boygenius", type: "artist", score: 0.87 },
+          ];
+        }
+        summary = `Discovered ${mockResults.length} ${targetType} candidates`;
         break;
+      }
 
-      case "qloo_rank":
-        mockData = {
-          batchId: `batch_${Date.now()}`,
-          rankedItems: (args.items || [
-            { name: "Cinematic Workwear Editorial", id: "c1" },
-            { name: "Sunday Reader Capsule Bundle", id: "c2" },
-            { name: "Independent Cinema Sidewalk Rail", id: "c3" },
-          ]).map((item: any, idx: number) => ({
-            ...item,
-            rank: idx + 1,
-            score: Number((0.95 - idx * 0.05).toFixed(3)),
-          })),
-        };
+      case "qloo_rank": {
+        const options: string[] = args.options || [];
+        mockResults = options.map((opt, idx) => ({
+          option: opt,
+          rank: idx + 1,
+          score: Number((0.95 - idx * 0.04).toFixed(3)),
+        }));
+        summary = `Ranked ${options.length} options in unified batch`;
         break;
-
-      case "qloo_where_popular":
-        mockData = {
-          places: [
-            { name: "Nitehawk Cinema", neighborhood: "Williamsburg", city: "Brooklyn" },
-            { name: "Word Bookstore", neighborhood: "Greenpoint", city: "Brooklyn" },
-          ],
-        };
-        break;
+      }
 
       default:
-        mockData = { status: "ok", result: true };
+        mockResults = [{ status: "ok" }];
     }
 
     return {
       status: "ok",
-      data: mockData as T,
+      summary,
+      data: { results: mockResults } as T,
+      results: mockResults,
+      resultCount: mockResults.length,
       provenance: {
         tool,
         requestId,
         sourceMode: "DEMO_FIXTURE",
         timestamp: new Date().toISOString(),
+        correlationId: requestId,
       },
     };
   }
 
   public shutdown() {
     if (this.childProcess) {
-      console.log("[Qloo MCP Client] Terminating MCP child process...");
       this.childProcess.kill();
       this.childProcess = null;
+      this.mcpReady = false;
     }
   }
 }

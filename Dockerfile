@@ -17,7 +17,6 @@ RUN npm ci
 # Copy full source trees
 COPY packages/ ./packages/
 COPY apps/ ./apps/
-COPY tsconfig.json ./
 
 # Build all packages, server, and web frontend
 RUN npm run build --workspaces
@@ -50,6 +49,10 @@ COPY --from=builder /app/apps/web/dist ./apps/web/dist
 
 # Expose server port
 EXPOSE 3001
+
+# Healthcheck against canonical health endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/api/health || exit 1
 
 # Run Fastify server
 CMD ["node", "apps/server/dist/server.js"]

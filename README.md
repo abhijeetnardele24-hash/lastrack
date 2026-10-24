@@ -2,9 +2,11 @@
 
 > **Turn slow stock into a culturally grounded experiment before cutting the price.**
 
-[![CI / Test Suite](https://img.shields.io/badge/Vitest-31%20Passed-brightgreen)](tests/)
-[![Security Scan](https://img.shields.io/badge/Security%20Scan-Clean%20(0%20Secrets)-brightgreen)](scripts/security-scan.cjs)
-[![MCP Harness](https://img.shields.io/badge/Qloo%20Harness-v0.1.26-1F6B4F)](https://www.npmjs.com/package/@qloo/qloo-harness)
+[![Vitest Unit Tests](https://img.shields.io/badge/Vitest-43%20Passed-brightgreen)](tests/)
+[![Playwright E2E](https://img.shields.io/badge/Playwright-26%20Passed-brightgreen)](tests/e2e/)
+[![Axe Accessibility](https://img.shields.io/badge/%40axe--core-0%20Critical%20Violations-brightgreen)](tests/e2e/accessibility.spec.ts)
+[![Security Scan](https://img.shields.io/badge/Security%20Scan-Clean%20(Working%20Tree%20%26%20Git%20History)-brightgreen)](scripts/security-scan.cjs)
+[![MCP Harness](https://img.shields.io/badge/Qloo%20Harness-v0.1.0-1F6B4F)](https://www.npmjs.com/package/@qloo/qloo-harness)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -18,7 +20,7 @@ LastRack offers an evidence-backed alternative: **re-contextualize the garment w
 - **Target Persona:** Independent boutique owner or merchandiser with slow-moving stock ($100–$500 garments).
 - **Core Innovation:** Connects inventory surplus to cultural taste graphs instead of margin-eroding price discounts.
 - **AI Safety & Rigor:** Strictly enforces the **Single-Query Ranking Invariant**, deterministic budget caps, and automated regex rejection of sales guarantees, causal demand claims, and demographic profiling.
-- **Auditable Truth:** Every recommendation links to an explicit node in the **Evidence Ledger** and exports as a signed Decision Receipt stamped with the mandatory disclaimer:
+- **Auditable Truth:** Every recommendation links to an explicit node in the **Evidence Ledger** and exports as a Decision Receipt with SHA-256 digest stamped with the mandatory disclaimer:
   > *"Planning hypothesis—not a sales forecast or endorsement by the named entities."*
 
 ---
@@ -46,24 +48,33 @@ To enable immediate evaluation without needing live Shopify store credentials, L
 
 ### 1. Installation
 ```bash
-git clone <repository_url>
+git clone https://github.com/abhijeetnardele24-hash/lastrack.git
 cd lastrack
-npm install
+npm ci
 ```
 
 ### 2. Run All Automated Verification Suites
 ```bash
-# Verify zero secrets or credentials committed
+# Verify zero secrets across working tree and complete Git history
 npm run security-scan
 
-# Run all 31 unit & integration tests with coverage
-npm test
+# Gate 1: ESLint 9 flat config
+npm run lint
 
-# Verify TypeScript across all packages and apps
+# Gate 2: TypeScript typecheck across monorepo
 npm run typecheck
 
-# Build contracts, domain, server, and web frontend
+# Gate 3: Run all 43 Vitest unit & contract tests with coverage
+npm test
+
+# Gate 4: Build production artifacts
 npm run build
+
+# Gate 5: Run Playwright E2E & @axe-core accessibility tests (Desktop & Mobile)
+npm run test:e2e
+
+# Gate 6: Production dependency vulnerability audit & reachability review
+npm run audit
 ```
 
 ### 3. Launch Development Server
@@ -73,19 +84,20 @@ npm run dev
 - **Web Frontend:** [http://localhost:5173](http://localhost:5173)
 - **Fastify Backend:** [http://localhost:3001](http://localhost:3001)
 
-*(Optional: Set `QLOO_API_KEY=your_key` in `.env` to execute live Qloo MCP calls. When omitted, LastRack runs safely in labeled `DEMO_FIXTURE` mode with 100% functionality).*
+*(Optional: Set `QLOO_API_KEY=your_key` in `.env` to execute live Qloo MCP calls. When omitted, LastRack runs safely in clearly labeled `DEMO_FIXTURE` mode).*
 
 ---
 
-## 🐳 Docker Deployment
+## 🐳 Docker Deployment & Status
 
-LastRack includes a production-ready, multi-stage Docker setup:
+LastRack provides a production multi-stage Dockerfile (`Dockerfile`) with an integrated health check targeting `/api/health`.
 
 ```bash
-# Build and run container
+# Build and run container (requires Docker on host)
 docker compose up --build
 ```
-Healthcheck runs automatically on `http://localhost:3001/api/health`.
+
+> **Verification Notice:** Docker execution on the current development host is marked `NOT_VERIFIED` because Docker CLI is not installed on this Windows environment. The Dockerfile syntax, multi-stage layout, and healthcheck have been statically verified.
 
 ---
 
@@ -98,11 +110,13 @@ lastrack/
 │   ├── domain/        # Pure domain logic: claims validator, constraints, singleQueryRank, ablation, receipts
 │   └── fixtures/      # Preloaded synthetic judge brief and verified demo agent run ledger
 ├── apps/
-│   ├── server/        # Fastify API server, SSE event streaming, MCP child process manager
+│   ├── server/        # Fastify API server, static SPA file serving, MCP child process manager
 │   └── web/           # React 18 + Vite frontend with editorial stockroom aesthetic
-├── tests/             # Vitest unit and integration suites (31 tests passing)
-├── scripts/           # Automated secret scanner (security-scan.cjs)
-└── docs/              # Comprehensive architecture, safe use, and evaluation documentation
+├── tests/
+│   ├── unit/          # Vitest unit and contract suites (43 tests passing)
+│   └── e2e/           # Playwright E2E and Axe accessibility scans (26 tests passing)
+├── scripts/           # Security scan, asset capture, audit check, and verification generator
+└── docs/              # Comprehensive architecture, safe use, deployment, and evidence documentation
 ```
 
 ### Bounded Agent State Machine
@@ -140,7 +154,7 @@ lastrack/
 ## 🔬 Core AI Invariants & Safe-Use Standards
 
 ### 1. Single-Query Ranking Invariant
-Qloo affinity scores represent affinity *relative to the input signal and the candidate set*. Comparing raw scores across different batch calls or different timestamps is invalid. LastRack enforces in code (`packages/domain/src/singleQueryRank.ts`) that **all comparable candidate options MUST be evaluated in the exact same `qloo_rank` batch call**.
+Qloo affinity scores represent affinity *relative to the input signal and the candidate set*. Comparing raw scores across different batch calls or different timestamps is invalid. LastRack enforces in code (`packages/domain/src/singleQueryRank.ts`) that **all comparable candidate options MUST be evaluated in the exact same `qloo_rank` batch call**, bound by a SHA-256 `rankDigest`.
 
 ### 2. Zero Demographic Profiling
 LastRack strictly prohibits targeting or reasoning based on race, ethnicity, religion, political party, health conditions, or sexual orientation.
@@ -171,33 +185,25 @@ LastRack hypotheses never claim official sponsorships or partnerships with refer
 
 As measured and verified on the local test suite:
 
-- **Secret Scan:** 0 credentials detected across all tracked files.
-- **Unit & Integration Tests:** 31 passed, 0 failed across 6 test files.
-- **TypeScript Typecheck:** 0 errors across 5 workspaces.
-- **Workspaces Production Build:** 0 errors (all dist bundles emitted).
-
-```
- Test Files  6 passed (6)
-      Tests  31 passed (31)
-   Duration  1.10s
-
- % Coverage report from v8:
- - packages/contracts: 100%
- - packages/domain:    100%
- - apps/server (agent controller): 86.22%
-```
+- **Secret Scan:** 0 credentials detected across working tree and complete Git history (`git log -p --all`).
+- **Unit & Contract Tests:** 43 passed, 0 failed across 8 test files with v8 coverage.
+- **Playwright & Axe E2E:** 26 passed, 0 failed across Desktop Chromium and Mobile Chrome with 0 critical accessibility violations.
+- **TypeScript Typecheck:** 0 errors across 5 workspace projects.
+- **Production Build:** 0 errors (all dist bundles emitted).
+- **Dependency Audit:** 5 upstream vulnerabilities documented with reachability analysis (unreachable stdio harness dependencies and bounded Zod usage).
 
 ---
 
 ## 📚 Complete Documentation Index
 
 - [Architecture & Data Pipeline](docs/ARCHITECTURE.md)
-- [Qloo MCP Integration Deep-Dive](docs/QLOO_INTEGRATION.md)
+- [Qloo MCP Integration & Canonical Contract Evidence](docs/LIVE_INTEGRATION_EVIDENCE.md)
+- [Production Deployment Guide](docs/DEPLOYMENT.md)
 - [Safe-Use & Responsible AI Framework](docs/SAFE_USE.md)
 - [Evaluation & Ablation Study ("Why Qloo?")](docs/EVALUATION.md)
 - [Hackathon Judge 3-Minute Tour](docs/JUDGE_TOUR.md)
 - [Devpost Submission Package](docs/DEVPOST_SUBMISSION.md)
-- [Submission Checklist & Audit Sign-Off](docs/SUBMISSION_CHECKLIST.md)
+- [Submission Checklist & Truthful Audit Sign-Off](docs/SUBMISSION_CHECKLIST.md)
 - [Machine-Readable Verification Results](docs/verification-results.json)
 
 ---

@@ -26,6 +26,7 @@ describe("Fastify Server Integration Endpoints", () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.payload);
     expect(body.status).toBe("healthy");
+    expect(typeof body.mcpReady).toBe("boolean");
     expect(body.sourceMode).toBeDefined();
     expect(["LIVE_QLOO", "DEMO_FIXTURE"]).toContain(body.sourceMode);
   });

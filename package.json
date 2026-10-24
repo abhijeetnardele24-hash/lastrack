@@ -2,6 +2,7 @@
   "name": "lastrack-monorepo",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "LastRack — Turn slow stock into a culturally grounded experiment before cutting the price.",
   "workspaces": [
     "packages/contracts",
@@ -21,15 +22,28 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "security-scan": "node scripts/security-scan.cjs",
-    "audit": "npm audit --omit=dev --audit-level=high"
+    "audit": "node scripts/audit-check.cjs"
+  },
+  "overrides": {
+    "@qloo/qloo-harness": {
+      "@earendil-works/pi-coding-agent": {
+        "brace-expansion": "^5.0.12",
+        "undici": "^8.12.3"
+      }
+    }
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.50.1",
     "@types/node": "^22.13.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "concurrently": "^9.1.2",
     "eslint": "^9.19.0",
+    "globals": "^15.15.0",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.9",
-    "@vitest/coverage-v8": "^2.1.9"
+    "typescript-eslint": "^8.24.0",
+    "vitest": "^2.1.9"
   },
   "engines": {
     "node": ">=22.19.0"

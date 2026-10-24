@@ -13,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({
   sourceMode,
   onOpenAbout,
   onOpenAblation,
-  isRunActive,
+  isRunActive: _isRunActive,
 }) => {
   const getBadgeClass = (mode: SourceMode) => {
     switch (mode) {
@@ -75,6 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Global Controls & Status */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button
+            id="ablation-toggle-btn"
             onClick={onOpenAblation}
             style={{
               display: "inline-flex",
@@ -98,6 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
+            id="about-toggle-btn"
             onClick={onOpenAbout}
             style={{
               display: "inline-flex",

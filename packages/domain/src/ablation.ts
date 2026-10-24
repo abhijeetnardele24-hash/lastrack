@@ -134,3 +134,22 @@ export function computeAblationComparison(
     differenceSummary: differences,
   };
 }
+
+export function verifyAblationEffect(
+  qlooPlans: ActivationPlan[],
+  ablatedPlans: ActivationPlan[]
+): {
+  isCulturallyAblated: boolean;
+  qlooEntitiesCount: number;
+  ablatedEntitiesCount: number;
+} {
+  const qlooEntities = new Set(qlooPlans.flatMap((p) => p.culturalEntityNames));
+  const ablatedEntities = new Set(ablatedPlans.flatMap((p) => p.culturalEntityNames));
+
+  return {
+    isCulturallyAblated: qlooEntities.size > 0 && ablatedEntities.size === 0,
+    qlooEntitiesCount: qlooEntities.size,
+    ablatedEntitiesCount: ablatedEntities.size,
+  };
+}
+

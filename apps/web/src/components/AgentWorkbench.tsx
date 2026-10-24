@@ -23,7 +23,7 @@ export const AgentWorkbench: React.FC<AgentWorkbenchProps> = ({ run, onCancel })
   const currentState = run.state;
   const isRunning = !["READY", "ERROR", "NEEDS_INPUT", "IDLE"].includes(currentState);
 
-  const getStepStatus = (stepState: AgentState, stepIndex: number) => {
+  const getStepStatus = (stepState: AgentState, _stepIndex: number) => {
     const stateOrder: AgentState[] = [
       "VALIDATING_BRIEF",
       "RESOLVING_ANCHORS",

@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Shield, Lock, FileCode, Cpu } from "lucide-react";
+import { X, Shield, Lock, Cpu } from "lucide-react";
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -7,6 +7,17 @@ interface AboutModalProps {
 }
 
 export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -27,6 +38,11 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
       onClick={onClose}
     >
       <div
+        id="about-modal"
+        data-testid="about-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="LastRack Architecture and Safe Use Boundary"
         style={{
           width: "100%",
           maxWidth: "760px",
@@ -52,7 +68,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             </p>
           </div>
 
-          <button onClick={onClose} style={{ padding: "4px", color: "var(--ink-muted)" }}>
+          <button onClick={onClose} aria-label="Close about modal" style={{ padding: "4px", color: "var(--ink-muted)" }}>
             <X size={20} />
           </button>
         </div>
@@ -61,7 +77,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           {/* Safe Use */}
           <div>
             <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--signal-evidence)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-              <Shield size={16} /> 1. Qloo Safe Use & Privacy Contract
+              <Shield size={16} /> 1. Qloo Safe Use & Privacy Contract (No Demographic Profiling)
             </h3>
             <p>
               LastRack strictly adheres to the official Qloo Safe-Use guidelines. All recommendations are derived from <strong>aggregate taste correlations</strong> between cultural entities. The system explicitly refuses and disables all inferences regarding race, religion, sexual orientation, health conditions, or sensitive demographic traits.

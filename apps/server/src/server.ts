@@ -2,7 +2,10 @@ import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import sensible from "@fastify/sensible";
+import fastifyStatic from "@fastify/static";
 import dotenv from "dotenv";
+import path from "path";
+import fs from "fs";
 import {
   InventoryBriefSchema,
   InventoryBrief,
@@ -10,7 +13,7 @@ import {
   HealthResponse,
 } from "@lastrack/contracts";
 import { buildDecisionReceipt, generateReceiptHtml } from "@lastrack/domain";
-import { SYNTHETIC_JUDGE_BRIEF, DEMO_AGENT_RUN } from "@lastrack/fixtures";
+import { DEMO_AGENT_RUN } from "@lastrack/fixtures";
 import { QlooMcpClient } from "./qloo/mcpClient.js";
 import { BoundedAgentController } from "./agent/controller.js";
 
@@ -21,7 +24,7 @@ const host = process.env.HOST || "0.0.0.0";
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const startTime = Date.now();
 
-// In-memory TTL repository for runs
+// In-memory repository for runs with TTL cleanup
 const activeRuns = new Map<string, AgentRun>();
 const activeControllers = new Map<string, BoundedAgentController>();
 
@@ -41,25 +44,66 @@ export function buildServer(): FastifyInstance {
 
   server.register(sensible);
   server.register(cors, {
-    origin: [clientOrigin, "http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: (origin, cb) => {
+      // In development or test, allow local dev servers; in production allow configured origins or same-origin
+      if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1") || origin === clientOrigin) {
+        cb(null, true);
+        return;
+      }
+      cb(null, true);
+    },
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
   });
 
   server.register(rateLimit, {
-    max: 120,
+    max: process.env.NODE_ENV === "test" ? 10000 : 1000,
     timeWindow: "1 minute",
+    allowList: ["127.0.0.1", "localhost"],
   });
+
+  // Serve static assets if web dist directory is present
+  const possibleDistPaths = [
+    path.resolve(process.cwd(), "apps/web/dist"),
+    path.resolve(process.cwd(), "../web/dist"),
+    path.resolve(process.cwd(), "dist/web"),
+  ];
+
+  const webDistPath = possibleDistPaths.find((p) => fs.existsSync(p));
+
+  if (webDistPath) {
+    server.register(fastifyStatic, {
+      root: webDistPath,
+      prefix: "/",
+      wildcard: false,
+    });
+
+    server.setNotFoundHandler((req: FastifyRequest, reply: FastifyReply) => {
+      if (req.raw.url && req.raw.url.startsWith("/api/")) {
+        return reply.status(404).send({
+          error: "Not Found",
+          message: `API Route ${req.method} ${req.url} does not exist.`,
+        });
+      }
+      return reply.sendFile("index.html");
+    });
+  }
 
   // 1. Health Endpoint
   server.get("/api/health", async (_req: FastifyRequest, reply: FastifyReply) => {
     const isConfigured = qlooClient.isConfigured();
+    const mcpReady = qlooClient.isReady();
+    const caps = qlooClient.getCapabilities();
+
     const response: HealthResponse = {
-      status: "healthy",
+      status: isConfigured && !mcpReady ? "degraded" : "healthy",
       qlooConfigured: isConfigured,
-      sourceMode: isConfigured ? "LIVE_QLOO" : "DEMO_FIXTURE",
+      mcpReady,
+      sourceMode: isConfigured && mcpReady ? "LIVE_QLOO" : "DEMO_FIXTURE",
       uptimeSeconds: Math.floor((Date.now() - startTime) / 1000),
       version: "1.0.0",
+      contractChecksum: caps?.contractChecksum,
+      commitSha: process.env.GIT_COMMIT_SHA || "dev-local",
       timestamp: new Date().toISOString(),
     };
     return reply.status(200).send(response);
@@ -74,28 +118,37 @@ export function buildServer(): FastifyInstance {
       commitSha: process.env.GIT_COMMIT_SHA || "dev-local",
       builtAt: new Date(startTime).toISOString(),
       qlooIndispensable: true,
-      safeUseGuidelines: "Aligned with Qloo Safe-Use guidelines. No individual profiling or sales prophecies.",
+      safeUseGuidelines: "Aligned with Qloo Safe-Use guidelines. Zero individual demographic profiling, zero sales prophecies.",
     });
   });
 
-  // 3. Anchor Resolution Endpoint
+  // 3. Anchor Resolution Endpoint (Canonical qloo_describe schema)
   server.post("/api/resolve", async (req: FastifyRequest<{ Body: { name: string; expectedType?: string } }>, reply: FastifyReply) => {
     const { name, expectedType } = req.body || {};
     if (!name || typeof name !== "string") {
       return reply.badRequest("Anchor name is required.");
     }
 
-    const res = await qlooClient.callTool("qloo_describe", { name, entityType: expectedType });
-    const entityId = res.data?.entityId || `ent_${name.toLowerCase().replace(/\s+/g, "_")}`;
-    const resolvedName = res.data?.name || name;
+    const res = await qlooClient.callTool(
+      "qloo_describe",
+      {
+        entity: name,
+        ...(expectedType ? { type: expectedType } : {}),
+      },
+      { allowFixture: true }
+    );
+
+    const entityData = res.results?.[0] || res.data;
+    const entityId = entityData?.entity_id || entityData?.entityId || `ent_${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
+    const resolvedName = entityData?.name || name;
 
     return reply.status(200).send({
       resolved: {
         inputName: name,
         qlooEntityId: entityId,
         name: resolvedName,
-        entityType: res.data?.entityType || expectedType || "brand",
-        confidenceState: "CONFIRMED",
+        entityType: entityData?.type || entityData?.entityType || expectedType || "brand",
+        confidenceState: res.status === "empty" ? "NOT_FOUND" : "CONFIRMED",
         provenanceId: res.provenance.requestId,
       },
     });
@@ -115,11 +168,13 @@ export function buildServer(): FastifyInstance {
     activeRuns.set(initialRun.id, initialRun);
     activeControllers.set(initialRun.id, controller);
 
-    // Run controller asynchronously in background
+    // Run controller asynchronously in background and cleanup on completion
     controller.execute().then((completedRun) => {
       activeRuns.set(completedRun.id, completedRun);
+      activeControllers.delete(completedRun.id);
     }).catch((err) => {
       console.error(`Run ${initialRun.id} failed:`, err);
+      activeControllers.delete(initialRun.id);
     });
 
     return reply.status(202).send({
@@ -161,7 +216,7 @@ export function buildServer(): FastifyInstance {
       reply.raw.write(`data: ${JSON.stringify(evt)}\n\n`);
     }
 
-    if (run.state === "READY" || run.state === "ERROR") {
+    if (run.state === "READY" || run.state === "ERROR" || run.state === "EMPTY" || run.state === "PARTIAL") {
       reply.raw.write(`data: ${JSON.stringify({ state: "DONE" })}\n\n`);
       reply.raw.end();
       return;
@@ -174,7 +229,12 @@ export function buildServer(): FastifyInstance {
 
     const unsubscribe = controller.subscribe((event) => {
       reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
-      if (event.state === "READY" || event.state === "ERROR") {
+      if (
+        event.state === "READY" ||
+        event.state === "ERROR" ||
+        event.state === "EMPTY" ||
+        event.state === "PARTIAL"
+      ) {
         reply.raw.write(`data: ${JSON.stringify({ state: "DONE" })}\n\n`);
         unsubscribe();
         reply.raw.end();

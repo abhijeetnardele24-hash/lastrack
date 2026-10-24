@@ -99,10 +99,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({
         {/* Row 1: Item & Category */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" }}>
           <div>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
+            <label htmlFor="itemName" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
               ITEM NAME
             </label>
             <input
+              id="itemName"
               type="text"
               value={brief.itemName}
               onChange={(e) => setBrief({ ...brief, itemName: e.target.value })}
@@ -119,10 +120,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
+            <label htmlFor="category" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
               CATEGORY
             </label>
             <input
+              id="category"
               type="text"
               value={brief.category}
               onChange={(e) => setBrief({ ...brief, category: e.target.value })}
@@ -139,10 +141,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
+            <label htmlFor="city" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
               CITY / LOCATION
             </label>
             <input
+              id="city"
               type="text"
               value={brief.city}
               onChange={(e) => setBrief({ ...brief, city: e.target.value })}
@@ -162,10 +165,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({
         {/* Row 2: Inventory Pressure & Budget Controls */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginBottom: "16px" }}>
           <div>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
+            <label htmlFor="unitsOnHand" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
               UNITS ON HAND
             </label>
             <input
+              id="unitsOnHand"
               type="number"
               min="1"
               value={brief.unitsOnHand}
@@ -183,10 +187,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
+            <label htmlFor="daysSlow" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
               DAYS SLOW
             </label>
             <input
+              id="daysSlow"
               type="number"
               min="1"
               value={brief.daysSlow}
@@ -204,10 +209,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
+            <label htmlFor="budgetCap" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
               BUDGET CAP ($)
             </label>
             <input
+              id="budgetCap"
               type="number"
               min="50"
               step="50"
@@ -226,10 +232,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
+            <label htmlFor="maxMarkdownPercent" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "4px" }}>
               MAX MARKDOWN (%)
             </label>
             <input
+              id="maxMarkdownPercent"
               type="number"
               min="0"
               max="50"
@@ -250,7 +257,7 @@ export const BriefForm: React.FC<BriefFormProps> = ({
 
         {/* Row 3: Known Customer Cultural Anchors */}
         <div style={{ marginBottom: "16px" }}>
-          <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "6px" }}>
+          <label htmlFor="newAnchorInput" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--ink-secondary)", marginBottom: "6px" }}>
             KNOWN CUSTOMER CULTURAL ANCHORS (QLOO SEEDS)
           </label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
@@ -277,6 +284,7 @@ export const BriefForm: React.FC<BriefFormProps> = ({
                   onClick={() => handleRemoveAnchor(idx)}
                   style={{ color: "var(--ink-muted)", display: "flex", alignItems: "center" }}
                   title="Remove anchor"
+                  aria-label={`Remove anchor ${anchor.name}`}
                 >
                   <X size={12} />
                 </button>
@@ -286,7 +294,9 @@ export const BriefForm: React.FC<BriefFormProps> = ({
 
           <div style={{ display: "flex", gap: "8px" }}>
             <input
+              id="newAnchorInput"
               type="text"
+              aria-label="Add cultural anchor"
               placeholder="Add another brand, artist, or film anchor..."
               value={newAnchorName}
               onChange={(e) => setNewAnchorName(e.target.value)}

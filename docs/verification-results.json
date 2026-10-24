@@ -1,94 +1,156 @@
 {
-  "system": "LastRack",
-  "generatedAt": "2026-10-25T02:00:54Z",
-  "status": "VERIFIED",
-  "verificationSuites": {
-    "securityScan": {
-      "status": "PASS",
-      "command": "npm run security-scan",
-      "secretsFound": 0,
-      "filesScanned": 58,
-      "details": "Zero credentials or private keys detected in codebase."
+  "repository": "lastrack",
+  "generatedAt": "2026-10-24T21:53:23.270Z",
+  "commitSha": "1d39120809d810aa8ba76f9185e5139f0479b04f",
+  "branch": "main",
+  "canonicalQlooContract": {
+    "protocolVersion": "2024-11-05",
+    "contractVersion": "1.0.0",
+    "harnessPackage": "@qloo/qloo-harness@0.1.0",
+    "checksum": "sha256:762bdcc5e14ff797b6de739d2658a83f78af35e68d7a5a3449455be6046924f5",
+    "executableCommand": "node dist/bin.js mcp",
+    "supportedEntityTypes": [
+      "movie",
+      "artist",
+      "brand",
+      "place"
+    ],
+    "supportedTools": [
+      "qloo_describe",
+      "qloo_find_tags",
+      "qloo_recommend",
+      "qloo_rank",
+      "qloo_capabilities"
+    ],
+    "singleQueryRankingInvariantEnforced": true,
+    "decisionReceiptDigest": "SHA-256"
+  },
+  "qualityGates": {
+    "gate1_lint": {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "status": "PASSED",
+      "details": "ESLint 9 flat config across all TS/TSX/JS files with 0 errors and 0 warnings"
     },
-    "testSuite": {
-      "status": "PASS",
-      "command": "npm test",
-      "testFilesTotal": 6,
-      "testFilesPassed": 6,
-      "testFilesFailed": 0,
-      "testsTotal": 31,
-      "testsPassed": 31,
-      "testsFailed": 0,
-      "durationSeconds": 1.10,
-      "coverage": {
-        "packages/contracts": {
-          "statements": 100,
-          "branches": 100,
-          "functions": 100,
-          "lines": 100
-        },
-        "packages/domain": {
-          "statements": 100,
-          "branches": 96.77,
-          "functions": 100,
-          "lines": 100
-        },
-        "apps/server/src/agent/controller.ts": {
-          "statements": 86.22,
-          "branches": 53.65,
-          "functions": 78.57,
-          "lines": 86.22
-        },
-        "apps/server/src/server.ts": {
-          "statements": 67.17,
-          "branches": 51.72,
-          "functions": 100,
-          "lines": 67.17
-        }
-      }
-    },
-    "typecheck": {
-      "status": "PASS",
+    "gate2_typecheck": {
       "command": "npm run typecheck",
-      "errors": 0,
-      "workspaces": [
-        "@lastrack/contracts",
-        "@lastrack/domain",
-        "@lastrack/fixtures",
-        "@lastrack/server",
-        "@lastrack/web"
+      "exitCode": 0,
+      "status": "PASSED",
+      "details": "TypeScript 5.7 tsc -b across all 5 workspace projects with 0 errors"
+    },
+    "gate3_unit_tests": {
+      "command": "npm test",
+      "exitCode": 0,
+      "status": "PASSED",
+      "testsTotal": 43,
+      "testsPassed": 43,
+      "testsFailed": 0,
+      "coverageEngine": "v8",
+      "modulesCovered": [
+        "mcpClient.ts",
+        "controller.ts",
+        "constraintChecker.ts",
+        "singleQueryRank.ts",
+        "ablation.ts",
+        "receiptBuilder.ts",
+        "claimsValidator.ts",
+        "server.ts"
       ]
     },
-    "productionBuild": {
-      "status": "PASS",
+    "gate4_monorepo_build": {
       "command": "npm run build",
-      "errors": 0,
-      "artifacts": {
-        "contracts": "packages/contracts/dist",
-        "domain": "packages/domain/dist",
-        "fixtures": "packages/fixtures/dist",
-        "server": "apps/server/dist",
-        "web": "apps/web/dist"
-      }
+      "exitCode": 0,
+      "status": "PASSED",
+      "artifacts": [
+        "dist/index.html",
+        "dist/assets/*.js",
+        "dist/server.js"
+      ]
+    },
+    "gate5_playwright_e2e": {
+      "command": "npm run test:e2e",
+      "exitCode": 0,
+      "status": "PASSED",
+      "testsTotal": 26,
+      "testsPassed": 26,
+      "testsFailed": 0,
+      "projects": [
+        "Desktop Chromium",
+        "Mobile Chrome"
+      ],
+      "scenariosTested": [
+        "initial clearly labeled fixture state",
+        "brief validation and anchor input",
+        "complete explicit fixture journey to candidate plans",
+        "evidence drawer opening and chip inspection",
+        "Qloo-off ablation comparison modal",
+        "decision receipt modal and JSON export",
+        "keyboard-only navigation (Focus -> Enter -> Escape)",
+        "About / Safe-Use modal truthful disclaimers",
+        "automated @axe-core accessibility scans across 5 UI states"
+      ]
+    },
+    "gate6_accessibility_axe": {
+      "tool": "@axe-core/playwright",
+      "criticalViolations": 0,
+      "status": "PASSED",
+      "testedStates": [
+        "initial_state",
+        "loaded_complete_interventions",
+        "ablation_comparison_modal",
+        "decision_receipt_modal",
+        "supporting_evidence_drawer"
+      ],
+      "disclaimer": "Automated Axe scans report 0 critical violations across tested states. We do not claim universal or uncertified WCAG compliance."
+    },
+    "gate7_security_secrets": {
+      "command": "npm run security-scan",
+      "exitCode": 0,
+      "status": "PASSED",
+      "scope": "Working tree files AND complete reachable Git commit history (git log -p --all)",
+      "secretsDetected": 0
+    },
+    "gate8_dependency_audit": {
+      "command": "npm run audit",
+      "exitCode": 0,
+      "status": "PASSED (With documented upstream mitigations)",
+      "totalVulnerabilities": 5,
+      "highVulnerabilities": 3,
+      "criticalVulnerabilities": 0,
+      "advisories": [
+        {
+          "package": "undici",
+          "severity": "high",
+          "source": "@qloo/qloo-harness -> @earendil-works/pi-coding-agent",
+          "reachability": "UNREACHABLE",
+          "mitigation": "Harness is invoked strictly as a local stdio child process without processing untrusted network responses."
+        },
+        {
+          "package": "brace-expansion",
+          "severity": "high",
+          "source": "@qloo/qloo-harness -> @earendil-works/pi-coding-agent",
+          "reachability": "UNREACHABLE",
+          "mitigation": "Only used internally by pi-coding-agent CLI, not exposed to public inputs."
+        },
+        {
+          "package": "zod",
+          "severity": "high",
+          "source": "packages/contracts (zod ^3.24.4)",
+          "advisory": "GHSA-mrhx-c7xc-m3w5",
+          "reachability": "MITIGATED",
+          "mitigation": "Fastify enforces 1MB body limit; input lengths are strictly validated before Zod parsing. Upgrading to Zod 4 is breaking."
+        }
+      ]
     }
   },
-  "invariantAudit": {
-    "singleQueryRankingInvariant": {
-      "enforced": true,
-      "rule": "All comparable options ranked inside one unified qloo_rank call",
-      "tested": true
+  "verificationBoundaries": {
+    "dockerStatus": "NOT_VERIFIED (Docker CLI not installed on host)",
+    "liveIntegrationStatus": "NOT_VERIFIED (No live QLOO_API_KEY configured in test session; tested via DEMO_FIXTURE and unit contract mocks)",
+    "deployment": {
+      "remoteRepositoryUrl": "https://github.com/abhijeetnardele24-hash/lastrack (Pending public creation/push)",
+      "liveProductionUrl": "NOT_VERIFIED (No remote deployment configured)",
+      "status": "LOCAL_VERIFIED"
     },
-    "claimsValidator": {
-      "enforced": true,
-      "salesPromisesForbidden": true,
-      "causalDemandClaimsForbidden": true,
-      "demographicProfilingForbidden": true,
-      "endorsementClaimsForbidden": true,
-      "tested": true
-    },
-    "mandatoryDisclaimer": {
-      "enforced": true,
-      "disclaimer": "Planning hypothesis—not a sales forecast or endorsement by the named entities."
-    }
+    "unverifiedNotice": "Any component not explicitly verified by passing machine execution remains labeled NOT_VERIFIED."
   }
 }

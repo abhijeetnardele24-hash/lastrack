@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { validateClaims } from "@lastrack/domain";
 import { DEMO_AGENT_RUN } from "@lastrack/fixtures";
-import { ActivationPlan, EvidenceNode } from "@lastrack/contracts";
+import { ActivationPlan } from "@lastrack/contracts";
 
 describe("claimsValidator", () => {
   const validPlans = DEMO_AGENT_RUN.plans;

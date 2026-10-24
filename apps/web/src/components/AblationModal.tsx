@@ -1,6 +1,6 @@
 import React from "react";
-import { ActivationPlan, EvidenceNode } from "@lastrack/contracts";
-import { X, Sparkles, AlertTriangle, ArrowRight } from "lucide-react";
+import { ActivationPlan } from "@lastrack/contracts";
+import { X, Sparkles } from "lucide-react";
 
 interface AblationModalProps {
   isOpen: boolean;
@@ -17,6 +17,17 @@ export const AblationModal: React.FC<AblationModalProps> = ({
   ablatedPlans,
   evidenceCount,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -37,6 +48,11 @@ export const AblationModal: React.FC<AblationModalProps> = ({
       onClick={onClose}
     >
       <div
+        id="ablation-modal"
+        data-testid="ablation-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="The Qloo Indispensability Test"
         style={{
           width: "100%",
           maxWidth: "1000px",
@@ -64,7 +80,7 @@ export const AblationModal: React.FC<AblationModalProps> = ({
             </p>
           </div>
 
-          <button onClick={onClose} style={{ padding: "4px", color: "var(--ink-muted)" }}>
+          <button onClick={onClose} aria-label="Close ablation modal" style={{ padding: "4px", color: "var(--ink-muted)" }}>
             <X size={20} />
           </button>
         </div>

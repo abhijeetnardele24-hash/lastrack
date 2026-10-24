@@ -4,6 +4,8 @@ import {
   MANDATORY_DISCLAIMER,
 } from "@lastrack/contracts";
 
+import { createHash } from "crypto";
+
 export function buildDecisionReceipt(
   run: AgentRun,
   selectedPlanId: string
@@ -15,6 +17,10 @@ export function buildDecisionReceipt(
 
   const linkedEvidenceIds = new Set(plan.evidenceNodeIds);
   const evidenceTrail = run.evidence.filter((e) => linkedEvidenceIds.has(e.id));
+  const exportedAt = new Date().toISOString();
+
+  const receiptPayload = `${run.id}:${plan.id}:${run.brief.itemName}:${plan.title}:${MANDATORY_DISCLAIMER}:${exportedAt}`;
+  const receiptDigest = `sha256:${createHash("sha256").update(receiptPayload).digest("hex")}`;
 
   return {
     runId: run.id,
@@ -23,9 +29,10 @@ export function buildDecisionReceipt(
     selectedPlan: plan,
     evidenceTrail,
     disclaimer: MANDATORY_DISCLAIMER,
-    exportedAt: new Date().toISOString(),
+    exportedAt,
     sourceMode: run.sourceMode,
     isSyntheticDemo: run.brief.isSyntheticDemo,
+    receiptDigest,
   };
 }
 

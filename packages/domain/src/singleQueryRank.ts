@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { ActivationPlan } from "@lastrack/contracts";
 
 export interface RankedCandidate<T = any> {
@@ -11,13 +12,20 @@ export interface RankedCandidate<T = any> {
 
 export interface BatchRankingResult {
   batchId: string;
+  optionType: string;
   querySignalEntityIds: string[];
   rankedCandidates: RankedCandidate[];
+  rankDigest: string;
   executedAt: string;
 }
 
+export function computeRankDigest(batchId: string, options: string[]): string {
+  const content = `${batchId}:${options.slice().sort().join(",")}`;
+  return `sha256:${createHash("sha256").update(content).digest("hex")}`;
+}
+
 /**
- * Validates that all candidate options within a category were evaluated in the same single Qloo batch call.
+ * Validates that all candidate options within a domain or category were evaluated in a single Qloo batch call.
  * Comparing scores across different request IDs is an invalid operation under Qloo's ranking model.
  */
 export function validateSingleQueryRankingInvariant(

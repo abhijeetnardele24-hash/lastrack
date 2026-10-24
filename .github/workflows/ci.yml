@@ -1,0 +1,55 @@
+name: LastRack CI Engineering Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Lint, Typecheck, Test, E2E, Security & Packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers and System Dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Gate 1 — ESLint flat config
+        run: npm run lint
+
+      - name: Gate 2 — TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Gate 3 — Unit, contract, and causal Vitest tests
+        run: npm test
+
+      - name: Gate 4 — Monorepo production build
+        run: npm run build
+
+      - name: Gate 5 — Playwright E2E and @axe-core accessibility suite
+        run: npm run test:e2e
+
+      - name: Gate 6 — Secret & Git history security scan
+        run: npm run security-scan
+
+      - name: Gate 7 — Production dependency audit & mitigation review
+        run: npm run audit
+
+      - name: Gate 8 — Verification results schema check
+        run: node scripts/generate-verification-results.cjs --verify-only

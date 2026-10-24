@@ -5,6 +5,7 @@ export const SourceModeSchema = z.enum([
   "CACHED_QLOO",
   "DEMO_FIXTURE",
   "DEGRADED",
+  "ERROR",
 ]);
 export type SourceMode = z.infer<typeof SourceModeSchema>;
 
@@ -102,6 +103,7 @@ export const ActivationPlanSchema = z.object({
     withinQueryRank: z.number().optional(),
     totalRankedInBatch: z.number().optional(),
     batchRankCallId: z.string().optional(),
+    rankDigest: z.string().optional(),
   }).optional(),
 });
 export type ActivationPlan = z.infer<typeof ActivationPlanSchema>;
@@ -167,15 +169,18 @@ export const DecisionReceiptSchema = z.object({
   exportedAt: z.string(),
   sourceMode: SourceModeSchema,
   isSyntheticDemo: z.boolean(),
+  receiptDigest: z.string().optional(),
 });
 export type DecisionReceipt = z.infer<typeof DecisionReceiptSchema>;
 
 export const HealthResponseSchema = z.object({
   status: z.enum(["healthy", "degraded", "unhealthy"]),
   qlooConfigured: z.boolean(),
+  mcpReady: z.boolean(),
   sourceMode: SourceModeSchema,
   uptimeSeconds: z.number(),
   version: z.string(),
+  contractChecksum: z.string().optional(),
   commitSha: z.string().optional(),
   timestamp: z.string(),
 });

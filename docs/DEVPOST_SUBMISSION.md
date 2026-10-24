@@ -27,7 +27,7 @@ LastRack acts as an editorial merchandising strategist for independent fashion r
    - Resolves messy merchant seeds to canonical entities (`qloo_describe`).
    - Maps co-occurring aesthetic and cultural tags across domains (`qloo_find_tags`).
    - Discovers unexpected cross-domain adjacencies in cinema, literature, and local venues (`qloo_recommend`).
-   - Ranks all candidate intervention concepts in **one unified batch query** (`qloo_rank`).
+   - Ranks all candidate intervention concepts in **one unified batch query per domain** (`qloo_rank`).
 3. **Three Feasible Rescue Experiments:** Formulates three budget-capped experiments across three distinct retail mechanisms:
    - **DISPLAY (Visual Merchandising):** Editorial window and mannequin restyling (e.g. *Cinematic Workwear: 'Past Lives' Reframe*).
    - **BUNDLE (Cross-Category Pairing):** Curated pairing with cultural media (e.g. *Literary & Audio Pairings for Solitary Walks*).
@@ -35,35 +35,35 @@ LastRack acts as an editorial merchandising strategist for independent fashion r
 4. **Deterministic Critique & Guardrails:** Enforces hard commercial constraints ($600 budget cap, execution windows) and filters out prohibited marketing tactics.
 5. **Claims Validator:** Strictly eliminates false sales promises, causal demand claims, unauthorized endorsement claims, and individual demographic profiling.
 6. **"Why Qloo?" Ablation Comparison:** Directly shows the merchant and judges what happens without Qloo: the agent collapses into generic clearance signs and sidewalk markdowns.
-7. **Decision Receipt Export:** Produces a printable, audit-ready HTML and JSON Decision Receipt stamped with the mandatory disclaimer:
+7. **Decision Receipt Export:** Produces a printable, audit-ready HTML and JSON Decision Receipt stamped with a SHA-256 digest and the mandatory disclaimer:
    > *"Planning hypothesis—not a sales forecast or endorsement by the named entities."*
 
 ---
 
 ## How We Built It
 
-- **Monorepo Architecture:** Cleanly decoupled into `@lastrack/contracts` (Zod schemas), `@lastrack/domain` (pure business logic, validators, ablation), `@lastrack/fixtures` (curated synthetic benchmark data), `apps/server` (Fastify API with SSE streaming), and `apps/web` (React 18 + Vite frontend).
-- **Official MCP Child Process:** Managed child process spawning `@qloo/qloo-harness@0.1.26` communicating over standard input/output (`stdio`) with JSON-RPC 2.0.
-- **Single-Query Ranking Invariant:** Enforced architectural rule ensuring all candidate options are ranked in a single `qloo_rank` batch call, preventing invalid cross-request score comparisons.
-- **Editorial Stockroom UI:** Custom Vanilla CSS design system pairing warm editorial paper tones (`#F2EFE7`), archive green (`#1F6B4F`), and terracotta accent (`#B94F32`) with crisp typography and micro-animations.
-- **Dual Source Modes:** Transparent toggle between `LIVE_QLOO` and `DEMO_FIXTURE` ensuring zero crashes during offline evaluation.
-- **Comprehensive Testing:** 31 automated unit and integration tests with v8 code coverage, TypeScript verification, secret scanning, and multi-stage Docker containerization.
+- **Monorepo Architecture:** Cleanly decoupled into `@lastrack/contracts` (Zod schemas), `@lastrack/domain` (pure business logic, validators, ablation, receipts), `@lastrack/fixtures` (curated synthetic benchmark data), `apps/server` (Fastify API with static file serving and SSE streaming), and `apps/web` (React 18 + Vite frontend).
+- **Official MCP Process Spawning:** Spawns `@qloo/qloo-harness` via local executable path (`node dist/bin.js mcp`) communicating over standard input/output (`stdio`) with JSON-RPC 2.0 (protocol version `2024-11-05`).
+- **Single-Query Ranking Invariant:** Enforced architectural rule ensuring candidate options within a domain are ranked in one batch `qloo_rank` call with score comparability preserved and bound by a SHA-256 `rankDigest`.
+- **Editorial Stockroom UI:** Custom Vanilla CSS design system pairing warm editorial paper tones (`#F2EFE7`), archive green (`#1F6B4F`), and terracotta accent (`#B94F32`) with accessible controls and micro-animations.
+- **Truthful Source Modes:** Transparent modes (`LIVE_QLOO`, `CACHED_QLOO`, `DEMO_FIXTURE`, `DEGRADED`, `ERROR`) ensuring zero silent fixture substitutions.
+- **Automated Verification:** 43 Vitest unit and contract tests, 26 Playwright E2E and Axe accessibility tests across Desktop Chromium and Mobile Chrome, secret scanning across working tree and Git history, and multi-stage containerization.
 
 ---
 
 ## Challenges We Overcame
 
-1. **Ensuring Mathematically Valid Ranking:** Qloo affinity scores reflect relative affinity against a specific query set. Comparing scores across separate API requests is statistically meaningless. We solved this by designing the Single-Query Ranking Invariant: candidate options across all mechanisms are bundled and evaluated in one single batch query, with the batch ID cryptographically bound to the resulting plan.
-2. **Preventing AI Overreach & Hallucinations:** Generative agents often invent inflated sales projections. We built an automated `claimsValidator` regex scanner that rejects causal assertions, guaranteed ROI promises, and unauthorized celebrity endorsement claims before results are displayed.
+1. **Ensuring Mathematically Valid Ranking:** Qloo affinity scores reflect relative affinity against a specific query set. Comparing scores across separate API requests is statistically invalid. We solved this by designing the Single-Query Ranking Invariant: candidate options within a category are evaluated in one single batch query, with the ranked results bound via a deterministic SHA-256 digest.
+2. **Eliminating Silent Mock Fallbacks:** In complex agentic workflows, systems often silently substitute fixture data when live APIs fail. We re-engineered the controller to maintain strict source-mode truthfulness: unconfigured runs start in labeled `DEMO_FIXTURE` mode with `DEMO_FIXTURE` evidence tags, while live failures transition to `ERROR` rather than faking live data.
 3. **Designing for Independent Merchants:** Independent boutique staff do not have time for complex dashboards. We designed the interface to mimic a high-end editorial lookbook and inventory card, presenting three concrete, actionable bets that can be executed in under an hour.
 
 ---
 
 ## Accomplishments We're Proud Of
 
-- **100% Core Domain Test Coverage:** Pure TypeScript business logic and contracts verified by 31 passing unit and integration tests.
-- **Zero Secrets Leaked:** Automated security scanning verified zero API keys or credentials committed to git history or source trees.
-- **Truthful Source-Mode Transparency:** Visible badges and evidence tags clearly indicate whether data came from live Qloo MCP calls or verified synthetic fixtures.
+- **Rigorous Test Suite:** 69 total tests (43 Vitest unit/contract tests + 26 Playwright E2E and Axe accessibility tests) passing with 0 failures.
+- **Zero Secrets Committed:** Automated security scanning verified 0 credentials or tokens committed across the working tree or reachable Git history.
+- **Truthful Source-Mode Transparency:** Visible badges and evidence tags clearly indicate whether data came from live Qloo calls or verified synthetic fixtures.
 - **Honest Ablation Benchmark:** A working "Why Qloo?" comparison that concretely demonstrates why cultural intelligence is indispensable for non-discount retail recovery.
 
 ---

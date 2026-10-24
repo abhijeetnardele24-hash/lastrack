@@ -11,7 +11,7 @@ interface InterventionBoardProps {
 
 export const InterventionBoard: React.FC<InterventionBoardProps> = ({
   plans,
-  evidence,
+  evidence: _evidence,
   onSelectPlan,
   onOpenEvidence,
 }) => {
@@ -29,7 +29,7 @@ export const InterventionBoard: React.FC<InterventionBoardProps> = ({
   if (!plans || plans.length === 0) return null;
 
   return (
-    <div style={{ marginTop: "24px" }}>
+    <div id="intervention-board" data-testid="intervention-board" style={{ marginTop: "24px" }}>
       <div style={{ marginBottom: "16px" }}>
         <h2 style={{ fontSize: "16px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>
           3. Feasible Inventory Rescue Interventions (3 Mechanisms)
@@ -44,7 +44,7 @@ export const InterventionBoard: React.FC<InterventionBoardProps> = ({
         gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
         gap: "16px",
       }}>
-        {plans.map((plan, idx) => (
+        {plans.map((plan) => (
           <div
             key={plan.id}
             style={{
