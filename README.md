@@ -1,214 +1,370 @@
 # LastRack
 
-> **Turn slow stock into a culturally grounded experiment before cutting the price.**
+> Before discounting slow inventory, LastRack uses Qloo cultural intelligence to design small, evidence-linked merchandising experiments—and shows exactly what becomes generic when Qloo is removed.
 
-[![Vitest Unit Tests](https://img.shields.io/badge/Vitest-43%20Passed-brightgreen)](tests/)
-[![Playwright E2E](https://img.shields.io/badge/Playwright-26%20Passed-brightgreen)](tests/e2e/)
-[![Axe Accessibility](https://img.shields.io/badge/%40axe--core-0%20Violations%20(Tested%20States)-brightgreen)](tests/e2e/accessibility.spec.ts)
-[![Security Scan](https://img.shields.io/badge/Security%20Scan-Clean%20(Working%20Tree%20%26%20Git%20History)-brightgreen)](scripts/security-scan.cjs)
-[![MCP Harness](https://img.shields.io/badge/Qloo%20Harness-v0.1.26-1F6B4F)](https://www.npmjs.com/package/@qloo/qloo-harness)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Vitest Tests](https://img.shields.io/badge/Vitest-92%20Passed-1F6B4F?style=flat-square)](tests/)
+[![Playwright E2E](https://img.shields.io/badge/Playwright-26%20Passed-1F6B4F?style=flat-square)](tests/e2e/)
+[![Axe Accessibility](https://img.shields.io/badge/Axe%20Scans-0%20Violations%20(Tested%20States)-1F6B4F?style=flat-square)](tests/e2e/accessibility.spec.ts)
+[![Security Scan](https://img.shields.io/badge/Security%20Scan-Clean%20(Working%20Tree%20%26%20History)-1F6B4F?style=flat-square)](scripts/security-scan.cjs)
+[![MCP Protocol](https://img.shields.io/badge/MCP%20Protocol-2024--11--05-1F6B4F?style=flat-square)](packages/contracts/src/index.ts)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 ---
 
-## 🏛️ For Hackathon Judges: Quick Overview
+## Navigation & Quick Links
 
-**LastRack** is a bounded merchandising intelligence agent built for independent fashion retailers. When inventory sits stagnant, traditional retail tools reflexively slash the price—eroding gross margins and cheapening brand identity.
+- [Live GitHub Repository](https://github.com/abhijeetnardele24-hash/lastrack)
+- [System Architecture](docs/ARCHITECTURE.md)
+- [Judge 3-Minute Tour](docs/JUDGE_TOUR.md)
+- [Qloo Integration & MCP Contract](docs/QLOO_INTEGRATION.md)
+- [Ablation Study ("Why Qloo?")](docs/EVALUATION.md)
+- [Safe-Use & Responsible AI Policy](docs/SAFE_USE.md)
+- [Video Production Handoff](docs/VIDEO_HANDOFF.md)
+- [Devpost Submission Draft](docs/DEVPOST_SUBMISSION.md)
+- [Authoritative Verification Results](docs/verification-results.json)
 
-LastRack offers an evidence-backed alternative: **re-contextualize the garment within the cultural world of its intended audience.** Powered by Qloo's cultural AI over the Model Context Protocol (MCP), LastRack identifies cross-domain taste affinities (indie films, music, aesthetics, local screening rooms) and formulates three budget-capped, low-risk merchandising experiments.
+---
 
-- **Target Persona:** Independent boutique owner or merchandiser with slow-moving stock ($100–$500 garments).
-- **Core Innovation:** Connects inventory surplus to cultural taste graphs instead of margin-eroding price discounts.
-- **AI Safety & Rigor:** Strictly enforces the **Single-Query Ranking Invariant**, deterministic budget caps, and automated regex rejection of sales guarantees, causal demand claims, and demographic profiling.
-- **Auditable Truth:** Every recommendation links to an explicit node in the **Evidence Ledger** and exports as a Decision Receipt with SHA-256 integrity digest stamped with the mandatory disclaimer:
+## The Problem
+
+Independent apparel merchants face a structural dilemma with unsold stock. When a seasonal garment sits on the rack past 28 days, standard retail management systems offer only one blunt remedy: **mark it down**. 20% off becomes 30%, then 50%. The store bleeds gross margin, trains patrons to wait for clearance racks, and strips the boutique of its editorial point of view.
+
+Yet discounting is frequently an **information failure**, not a product failure. In independent retail, garments are rarely purchased as mere utility—they are bought for aesthetic identity and cultural resonance.
+
+Consider our benchmark scenario:
+- **Product:** Olive Linen Overshirt (100% washed European linen, custom horn buttons)
+- **Inventory:** 42 units sitting unsold after 28 days
+- **Retail Price:** $140 USD
+- **Store Location:** Brooklyn, New York
+
+Slashing this piece by 30% burns $1,764 in gross margin without answering the central question: **Why did the customer walk past it?**
+
+The shirt did not fail because olive linen is unappealing; it failed because it sat in visual isolation, stripped of the cultural narrative that makes it relevant to the neighbourhood’s patrons. Traditional retail tools cannot see this because they only track inventory velocity and SKU IDs. They have no vocabulary for cultural affinity.
+
+---
+
+## What LastRack Does
+
+LastRack acts as a bounded merchandising intelligence agent that designs small, evidence-linked retail interventions before a merchant touches the markdown marker.
+
+```
+Merchant Brief Input
+       │
+       ▼
+Qloo Cultural Graph (MCP Child Process: Describe → Tags → Recommend → Rank)
+       │
+       ▼
+Deterministic Constraints & Automated Critique Guardrails
+       │
+       ▼
+Three Feasible Merchandising Experiments (Display, Bundle, Local Activation)
+       │
+       ▼
+Evidence Ledger & Decision Receipt with SHA-256 Audit Digest
+```
+
+1. **Merchant Brief Intake:** The merchant enters the stagnant SKU, unit count, location, hard budget ceiling (e.g., $600), maximum markdown tolerance (e.g., 10%), prohibited tactics (e.g., no paid social, no demographic profiling), and three cultural seeds that reflect their audience (e.g., *A24*, *Phoebe Bridgers*, *Bode*).
+2. **Qloo Taste Graph Exploration:** Over the Model Context Protocol (MCP), LastRack queries Qloo's cultural intelligence layer to ground seeds into canonical entities, identify aesthetic tag co-occurrences, discover cross-domain cultural affinities across cinema, music, and local venues, and rank candidate options.
+3. **Three Bounded Experiments:** Formulates three distinct, feasible interventions:
+   - **DISPLAY (Visual Merchandising):** Window and styling reframes connecting the garment to cinematic or aesthetic narratives.
+   - **BUNDLE (Cross-Category Pairing):** Curated physical pairings with cultural artifacts (literature, audio, provisions).
+   - **LOCAL_ACTIVATION (Community Partnership):** Low-cost neighbourhood collaborations with independent venues.
+4. **Deterministic Guardrails & Critique:** Enforces the merchant's budget ceiling and execution window, rejecting any proposed tactic exceeding constraints.
+5. **Claims Validator:** Rejects sales guarantees, causal demand claims, unauthorized endorsement claims, and individual demographic targeting.
+6. **"Why Qloo?" Ablation:** Provides a side-by-side comparison showing what happens when Qloo is removed: the plan collapses into generic clearance endcaps and margin-destroying discounts.
+7. **Decision Receipt Export:** Generates an auditable, timestamped HTML and JSON receipt with a SHA-256 checksum and mandatory non-endorsement disclaimer.
+
+> **Important Boundary:** LastRack provides **planning hypotheses**, not sales predictions or demand forecasts. Cultural affinity indicates aesthetic alignment; it does not guarantee commercial transactions.
+
+---
+
+## Demonstration Scenario
+
+LastRack ships with a preloaded, verified benchmark scenario representing an independent boutique in Brooklyn:
+
+| Scenario Parameter | Value | Rationale |
+| :--- | :--- | :--- |
+| **Garment** | Olive Linen Overshirt | High-craft seasonal item ($140 retail) vulnerable to premature discounting |
+| **Inventory on Hand** | 42 units | Realistic boutique overstock volume |
+| **Stagnation Period** | 28 days | Standard threshold before conventional markdowns occur |
+| **Boutique Location** | Brooklyn, New York | Geographically distinct subcultural retail market |
+| **Merchant Cultural Seeds** | *A24*, *Phoebe Bridgers*, *Bode* | Coherent aesthetic universe (indie cinema, introspective folk, heritage craft) |
+| **Budget Cap** | $600 USD total | Realistic operating budget for an independent shop |
+| **Maximum Markdown** | 10% | Hard margin boundary; preserves retail price integrity |
+| **Forbidden Tactics** | Paid influencer ads, individual demographic targeting | Enforces organic merchandising and ethical customer privacy |
+
+### Generated Merchandising Experiments
+
+![Interventions Board](docs/assets/screenshots/02-interventions-board.png)
+
+1. **DISPLAY — Cinematic Workwear: 'Past Lives' Editorial Reframe**
+   - *Estimated Cost:* $180 (within $600 cap)
+   - *Markdown:* 0% (full $140 retail preserved)
+   - *Mechanism:* Front window restyle framing the overshirt alongside muted vintage tailoring, film stills, and low-contrast linen drape.
+   - *Cultural Link:* Qloo affinity connection between *A24* film catalogue and muted workwear aesthetics.
+
+2. **BUNDLE — Literary & Audio Pairings for Solitary Walks**
+   - *Estimated Cost:* $250 (within $600 cap)
+   - *Markdown:* 0% (paired gift bundle)
+   - *Mechanism:* Overshirt bundled with an independent poetry volume and curated vinyl listening slip.
+   - *Cultural Link:* Qloo cross-domain co-occurrence between *Phoebe Bridgers* songwriting themes and reflective print literature.
+
+3. **LOCAL_ACTIVATION — Independent Cinema Screening Pop-Up Display**
+   - *Estimated Cost:* $420 (within $600 cap)
+   - *Markdown:* 0% (partner ticket voucher included with garment purchase)
+   - *Mechanism:* Foyer rack pop-up at local independent cinema (*Nitehawk Cinema*) during retrospective weekend.
+   - *Cultural Link:* Geographic venue affinity linking Brooklyn cinephiles to boutique craft fashion.
+
+### Decision Receipt Output
+
+![Decision Receipt Modal](docs/assets/screenshots/04-decision-receipt-modal.png)
+
+Every selected experiment exports as an auditable Decision Receipt containing:
+- Full brief parameters and inventory baseline
+- Explicit Qloo evidence links with batch IDs and canonical hashes
+- Financial constraint adherence certificate
+- Deterministic SHA-256 integrity digest
+- Mandatory ethical disclaimer:
   > *"Planning hypothesis—not a sales forecast or endorsement by the named entities."*
 
----
+### What the Qloo-Off Ablation Produces
 
-## 🎯 The Benchmark Synthetic Scenario
+![Ablation Comparison Modal](docs/assets/screenshots/03-ablation-comparison-modal.png)
 
-To enable immediate evaluation without needing live Shopify store credentials, LastRack preloads the curated judge benchmark scenario:
-
-- **Slow Inventory Item:** *Olive Linen Overshirt* (100% Washed European Linen, Horn Buttons)
-- **Units on Hand:** 42 units
-- **Stagnation Period:** 28 days slow
-- **Boutique Location:** Brooklyn, New York
-- **Budget Cap:** $600 USD
-- **Max Permissible Markdown:** 10%
-- **Merchant Cultural Seeds:** *A24*, *Phoebe Bridgers*, *Bode*
-- **Forbidden Tactics:** *Paid influencer campaign*, *Individual demographic targeting*
+When Qloo cultural intelligence is disabled, the agent loses access to the taste graph. Without cross-domain affinity data, the system has no storytelling vocabulary and collapses into conventional markdown reflexes:
+- Cultural entities discovered: **0** (vs. 3 distinct entities with Qloo)
+- Strategy: Generic "Spring Clearance" sidewalk rack and random deadstock bundling
+- Price reduction required: **15% to 30% markdown** (destroying up to $1,764 in gross margin)
+- Evidence trail: 1 trivial node (merchant inventory count only)
 
 ---
 
-## ⚡ Quick Start: Run in 60 Seconds
+## Why Qloo Is Necessary
+
+Qloo provides the cultural graph intelligence that makes non-discount retail interventions possible. Without Qloo, an automated agent has only inventory attributes (material, size, price) and no bridge to the external cultural world.
+
+### Exact Sponsor MCP Integration
+
+LastRack connects directly to the official `@qloo/qloo-harness` (v0.1.26) as an isolated child process over standard input/output (`stdio`), implementing JSON-RPC 2.0 under the `2024-11-05` protocol version:
+
+```
+Fastify Server (apps/server)
+       │ stdio (JSON-RPC 2.0)
+       ▼
+@qloo/qloo-harness (node dist/bin.js mcp)
+       ├── qloo_capabilities  (Verifies protocol version and available tools)
+       ├── qloo_describe      (Resolves merchant cultural seeds to canonical entity IDs)
+       ├── qloo_find_tags     (Maps co-occurring aesthetic and thematic descriptors)
+       ├── qloo_recommend     (Discovers cross-domain entities across film, music, venues)
+       └── qloo_rank          (Evaluates candidate affinity against seed profiles)
+```
+
+### The Single-Query Ranking Invariant
+
+A fundamental mathematical reality of Qloo's affinity engine is that **affinity scores represent relative affinity against a specific query set and entity domain**. Comparing scores across separate requests or across disparate domains is mathematically invalid.
+
+LastRack enforces this principle in code (`packages/domain/src/singleQueryRank.ts`):
+
+> **Invariant:** *"One `qloo_rank` batch per comparable entity domain."*
+
+- Candidate interventions within the same domain (e.g., all visual display candidates) are ranked in **one single batch call**.
+- Each batch is bound by a deterministic SHA-256 `rankDigest`.
+- Multiple batch IDs within a single domain are rejected by the validator.
+- Cross-domain scores are never directly compared against one another.
+
+*Disclaimer: LastRack is an independent hackathon submission. Mentions of Qloo or any cultural entities do not imply commercial endorsement, partnership, or sponsorship by those entities.*
+
+---
+
+## Architecture & System Design
+
+![LastRack Architecture](docs/assets/architecture.png)
+
+LastRack is architected as a modular TypeScript monorepo with strict boundary separation:
+
+```
+lastrack/
+├── packages/
+│   ├── contracts/     # Zod schemas, data models, state machine types
+│   ├── domain/        # Pure domain logic: claims validator, constraints, singleQueryRank, ablation, receipts
+│   └── fixtures/      # Curated synthetic benchmark scenario and verified demo run ledger
+├── apps/
+│   ├── server/        # Fastify API server, static SPA file serving, MCP child process manager
+│   └── web/           # React 18 + Vite frontend with editorial stockroom aesthetic
+├── tests/
+│   ├── unit/          # Vitest unit, integration, and contract suites (92 tests)
+│   └── e2e/           # Playwright E2E and Axe accessibility scans (26 tests)
+├── scripts/           # Security scan, asset capture, audit check, and verification generator
+└── docs/              # In-depth architectural, evaluation, safe-use, and evidence documentation
+```
+
+### Key Components
+
+1. **Frontend (`apps/web`):** Built with React 18 and Vite. Features a refined "editorial stockroom" design system pairing archival paper surfaces (`#F2EFE7`), heritage forest green (`#1F6B4F`), and terracotta accents (`#B94F32`). Zero generic AI chat interfaces; all workflows are structured through inventory cards, intervention boards, and evidence drawers.
+2. **Fastify Backend (`apps/server`):** Single unified production service. Serves REST endpoints (`/api/runs`, `/api/health`), streams live agent state machine transitions via Server-Sent Events (`/api/runs/:id/events`), and serves the compiled static SPA.
+3. **Bounded Agent Controller:** Deterministic state machine (`VALIDATING_BRIEF` → `RESOLVING_ANCHORS` → `MAPPING_TASTE` → `GENERATING_CANDIDATES` → `RANKING_CANDIDATES` → `CONSTRAINT_CHECK` → `CRITIQUE` → `READY`). Enforces a maximum ceiling of 15 MCP calls per run.
+4. **Qloo MCP Child Process:** Spawns `node dist/bin.js mcp` from `@qloo/qloo-harness` via `stdio`. Never exposes network ports or API credentials to the browser.
+5. **Evidence Ledger:** Machine-verifiable audit trail recording every statement's supporting evidence class (`MERCHANT_INPUT`, `QLOO_EVIDENCE`, `DETERMINISTIC_DERIVATION`, `AUTHORED_HYPOTHESIS`, `DEMO_FIXTURE`).
+6. **Source Modes:** Truthful runtime reporting across `LIVE_QLOO`, `CACHED_QLOO`, `DEMO_FIXTURE`, `DEGRADED`, and `ERROR`. Missing API credentials gracefully transition to `DEMO_FIXTURE` with visible badges; errors are never silently masked with fake data.
+
+*For complete architectural specifications, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+
+---
+
+## Judge Quick Start
+
+Get LastRack running locally in under 60 seconds.
 
 ### Prerequisites
-- Node.js `>= 22.19.0`
+- Node.js `>= 22.0.0`
 - npm `>= 10.0.0`
 
-### 1. Installation
+### 1. Clone & Install
 ```bash
 git clone https://github.com/abhijeetnardele24-hash/lastrack.git
 cd lastrack
 npm ci
 ```
 
-### 2. Run All Automated Verification Suites
-```bash
-# Verify zero secrets across working tree and complete Git history
-npm run security-scan
-
-# Gate 1: ESLint 9 flat config
-npm run lint
-
-# Gate 2: TypeScript typecheck across monorepo
-npm run typecheck
-
-# Gate 3: Run all 43 Vitest unit & contract tests with coverage
-npm test
-
-# Gate 4: Build production artifacts
-npm run build
-
-# Gate 5: Run Playwright E2E & @axe-core accessibility tests (Desktop & Mobile)
-npm run test:e2e
-
-# Gate 6: Production dependency vulnerability audit & reachability review
-npm run audit
-```
-
-### 3. Launch Development Server
+### 2. Launch Local Workbench
 ```bash
 npm run dev
 ```
-- **Web Frontend:** [http://localhost:5173](http://localhost:5173)
-- **Fastify Backend:** [http://localhost:3001](http://localhost:3001)
 
-*(Optional: Set `QLOO_API_KEY=your_key` in `.env` to execute live Qloo MCP calls. When omitted, LastRack runs safely in clearly labeled `DEMO_FIXTURE` mode).*
+Expected output:
+- **Fastify API Server:** `http://127.0.0.1:3001` (serving `/api/health`, `/api/runs`, and SSE)
+- **Vite Web Frontend:** `http://localhost:5173`
+
+Open `http://localhost:5173` in your browser. The benchmark scenario is preloaded. Click **"Run LastRack Agent"** to watch the bounded state machine execute and inspect the 3 generated experiments, evidence drawer, ablation comparison, and exportable decision receipt.
+
+### 3. Optional Live Qloo Execution
+To execute against the live Qloo API instead of verified fixtures:
+```bash
+export QLOO_API_KEY="your_actual_api_key_here"
+npm run dev
+```
+*(On Windows PowerShell: `$env:QLOO_API_KEY="your_actual_api_key_here"`).*
+
+When the key is present, LastRack executes real live MCP calls and reports `sourceMode: "LIVE_QLOO"`. When omitted, LastRack runs safely in clearly labeled `DEMO_FIXTURE` mode.
 
 ---
 
-## 🐳 Docker Deployment & Status
+## Verification & Quality Gates
 
-LastRack provides a production multi-stage Dockerfile (`Dockerfile`) with an integrated health check targeting `/api/health`.
+LastRack enforces an exhaustive, multi-tier automated verification pipeline with zero tolerance for broken tests, type errors, or security leaks:
 
 ```bash
-# Build and run container (requires Docker on host)
-docker compose up --build
+# 1. Run secret scan across working tree and entire Git history
+npm run security-scan
+
+# 2. Run ESLint 9 flat configuration
+npm run lint
+
+# 3. Run TypeScript typecheck across all workspaces
+npm run typecheck
+
+# 4. Run full Vitest suite (unit, integration, contract, verifier) with v8 coverage
+npm test
+
+# 5. Build production distribution bundles
+npm run build
+
+# 6. Run Playwright E2E and Axe accessibility scans across desktop and mobile
+npm run test:e2e
+
+# 7. Run production dependency vulnerability audit
+npm run audit
 ```
 
-> **Verification Notice:** Docker execution on the current development host is marked `NOT_VERIFIED` because Docker CLI is not installed on this Windows environment. The Dockerfile syntax, multi-stage layout, and healthcheck have been statically verified.
+### Exact Current Results
+
+| Gate | Scope | Status | Measured Evidence |
+| :--- | :--- | :--- | :--- |
+| **Secret Scan** | Working tree & entire Git history | **PASSED** | 0 credentials detected across 1,000+ scanned lines |
+| **ESLint** | Workspace TS/TSX/JS files | **PASSED** | 36 files checked with 0 errors and 0 warnings |
+| **TypeScript** | 5 monorepo projects (`tsc -b`) | **PASSED** | 0 type errors |
+| **Vitest Tests** | Unit, integration, contract, verifier | **PASSED** | 92 tests passing across 10 test files (0 failures, 0 skipped) |
+| **Code Coverage** | v8 coverage across core domain & server | **PASSED** | 82.9% Statements / Lines, 71.72% Branches, 89.36% Functions |
+| **Production Build** | Monorepo build | **PASSED** | 2 production bundles emitted (`apps/server/dist`, `apps/web/dist`) |
+| **Playwright E2E** | Desktop Chromium & Mobile Chrome | **PASSED** | 26/26 tests passed |
+| **Accessibility (Axe)** | Automated Axe scans across tested states | **PASSED** | 0 violations detected across tested views and enabled rules *(we do not claim universal WCAG compliance)* |
+| **Dependency Audit** | Production dependencies (`--omit=dev`) | **WARN / NOT_CLEAN** | 5 upstream vulnerabilities honestly reported (3 high, 2 moderate locked in upstream vendor shrinkwraps) |
+
+### Dual-Mode Evidence Verification Architecture
+
+LastRack implements an explicit two-mode verification architecture to guarantee non-circular evidence validation:
+
+1. **Metadata-Only Committed Snapshot Validation:**
+   ```bash
+   node scripts/generate-verification-results.cjs --verify-metadata-only --evidence-file docs/verification-results.json
+   git diff --exit-code -- docs/verification-results.json
+   ```
+   Validates schema, tested implementation SHA, direct carrier ancestry (`revCount <= 1`), truthful unverified boundaries, and canonical contract metadata without comparing transient CI artifact timestamps or hashes against old local snapshots.
+
+2. **Full Same-Run CI Artifact Verification:**
+   ```bash
+   node scripts/generate-verification-results.cjs --output test-results/ci-verification-results.json
+   node scripts/generate-verification-results.cjs --verify-only --evidence-file test-results/ci-verification-results.json
+   ```
+   Generates independent evidence from fresh CI run artifacts and strictly matches all 10 raw artifact SHA-256 hashes and metrics.
 
 ---
 
-## 🏗️ Architecture & Monorepo Structure
+## Responsible Use & Privacy Policy
 
-```
-lastrack/
-├── packages/
-│   ├── contracts/     # Shared Zod schemas, data models, state machine types
-│   ├── domain/        # Pure domain logic: claims validator, constraints, singleQueryRank, ablation, receipts
-│   └── fixtures/      # Preloaded synthetic judge brief and verified demo agent run ledger
-├── apps/
-│   ├── server/        # Fastify API server, static SPA file serving, MCP child process manager
-│   └── web/           # React 18 + Vite frontend with editorial stockroom aesthetic
-├── tests/
-│   ├── unit/          # Vitest unit, integration, and contract suites (65 tests passing)
-│   └── e2e/           # Playwright E2E and Axe accessibility scans (26 tests passing)
-├── scripts/           # Security scan, asset capture, audit check, and verification generator
-└── docs/              # Comprehensive architecture, safe use, deployment, and evidence documentation
-```
+LastRack is built around strict ethical constraints governing cultural AI in commerce:
 
-### Bounded Agent State Machine
+1. **Zero Demographic Profiling:** Targeting or segmenting customers based on race, ethnicity, religion, political affiliation, health conditions, or sexual orientation is strictly prohibited and rejected by the validator.
+2. **Zero Surveillance:** LastRack operates purely on aggregate cultural co-occurrence graphs. It does not ingest, track, or store individual consumer profiles, device identifiers, or personal browsing history.
+3. **No Sales Prophecies or Guarantees:** Cultural affinity measures alignment, not compulsion. Automated regex critique blocks any language promising guaranteed revenue, uplift percentages, or conversion multipliers.
+4. **No Fabricated Causal Claims:** Recommendations are presented as planning hypotheses. LastRack never asserts that stocking an item *caused* cultural interest.
+5. **Human-in-the-Loop Agency:** LastRack proposes experiments; it never executes transactions, alters store prices, or places orders autonomously.
+6. **Mandatory Non-Endorsement Notice:** Every exported receipt and report carries the unalterable notice:
+   > *"Planning hypothesis—not a sales forecast or endorsement by the named entities."*
 
-```
-[ IDLE ]
-   │
-   ▼
-[ VALIDATING_BRIEF ] ── (Validates merchant brief, inventory details, budget caps)
-   │
-   ▼
-[ RESOLVING_ANCHORS ] ─ (Calls qloo_describe to establish canonical entity IDs)
-   │
-   ▼
-[ MAPPING_TASTE ] ───── (Calls qloo_find_tags to establish aesthetic co-occurrences)
-   │
-   ▼
-[ GENERATING_CANDIDATES ] (Calls qloo_recommend for cross-domain entities in film, fashion, music, places)
-   │
-   ▼
-[ RANKING_CANDIDATES ] ── (Calls qloo_rank in one batch per entity domain — enforcing Single-Query Invariant)
-   │
-   ▼
-[ CONSTRAINT_CHECK ] ──── (Evaluates budget cap, maximum markdown, and merchant forbidden tactics)
-   │
-   ▼
-[ CRITIQUE ] ──────────── (Automated claims validator: rejects sales promises, causal claims, demographics)
-   │
-   ▼
-[ READY ] ─────────────── (Emits 3 verified experiments, evidence ledger, and ablation baseline)
-```
+*For complete policy details, see [docs/SAFE_USE.md](docs/SAFE_USE.md).*
 
 ---
 
-## 🔬 Core AI Invariants & Safe-Use Standards
+## Limitations & Truthful Boundaries
 
-### 1. Single-Query Ranking Invariant
-Qloo affinity scores represent affinity *relative to the input signal and the candidate set within a specific domain*. Cross-domain scores are never directly compared. LastRack enforces in code (`packages/domain/src/singleQueryRank.ts`): **“One `qloo_rank` batch per comparable entity domain.”** Candidate plans within the same entity domain must share one batch ID and are bound by a deterministic SHA-256 `rankDigest` integrity checksum. Multiple batch IDs inside one domain fail the invariant.
+In adherence to hackathon integrity and honest reporting:
 
-### 2. Zero Demographic Profiling
-LastRack strictly prohibits targeting or reasoning based on race, ethnicity, religion, political party, health conditions, or sexual orientation.
-
-### 3. Zero Sales Prophecies
-Affinity measures cultural alignment, **not consumer compulsion**. The automated claims validator rejects any language promising guaranteed revenue, uplift percentages, or conversion multipliers.
-
-### 4. Non-Endorsement Disclaimers
-LastRack hypotheses never claim official sponsorships or partnerships with referenced artists or studios. All exports carry the unalterable notice:
-> *"Planning hypothesis—not a sales forecast or endorsement by the named entities."*
+- **Source Mode:** When running without `QLOO_API_KEY`, LastRack operates in `DEMO_FIXTURE` mode using curated synthetic data. It never fabricates live API calls.
+- **Dependency Audit:** The dependency audit currently reports `WARN / NOT_CLEAN` due to 5 upstream dependencies locked within the `@earendil-works/pi-coding-agent` shrinkwrap bundled inside `@qloo/qloo-harness` (2 high: `undici`, `brace-expansion`) and `@lastrack/contracts` (`zod` high, mitigated via Fastify 1MB payload limits). These upstream vendor dependencies cannot be resolved without breaking vendor package integrity.
+- **External Host Boundaries:** Docker host execution on Windows, live Qloo network queries (when key is absent), and external remote cloud deployments remain classified as `NOT_VERIFIED` unless genuinely exercised on configured infrastructure.
 
 ---
 
-## 📊 "Why Qloo?" Ablation Study Summary
+## Visual Documentation
 
-| Dimension | With Qloo (LastRack) | Without Qloo (Ablated Baseline) |
-| :--- | :--- | :--- |
-| **Cultural Entities Discovered** | **3 distinct entities** across film (*Past Lives*), music (*Phoebe Bridgers*), and venues (*Nitehawk Cinema*). | **0 cultural entities**. System is blind to aesthetic subcultures. |
-| **Intervention Strategy** | **Storytelling & Context:** Window display restyle, curated reading bundle, local screening room pop-up. | **Price Cutting:** Generic clearance endcap, random bag bundle with markdown, untargeted sidewalk rack. |
-| **Price Discount Required** | **0% markdown** (retains full $140 retail value). | **10% - 30% markdown** required to stimulate movement. |
-| **Supporting Evidence Ledger** | **6 machine-verified nodes** with explicit Qloo tool request IDs and co-occurrence scores. | **1 node** (only raw merchant inventory count remains). |
+### Overview & Brief Formulation
+![Overview & Brief Formulation](docs/assets/screenshots/01-overview-brief-form.png)
 
-*Full ablation report available in [docs/EVALUATION.md](docs/EVALUATION.md).*
+### Supporting Evidence Ledger
+![Supporting Evidence Ledger](docs/assets/screenshots/05-evidence-drawer.png)
 
----
-
-## 🧪 Verification & Audit Results
-
-As measured and verified on the local test suite:
-
-- **Secret Scan:** 0 credentials detected across working tree and complete Git history (`git log -p --all`).
-- **Unit & Contract Tests:** Passed across test suites with v8 coverage.
-- **Playwright & Axe E2E:** Passed across Desktop Chromium and Mobile Chrome. Automated Axe scans detected 0 violations across tested states and enabled rules (we do not claim universal WCAG compliance).
-- **TypeScript Typecheck:** 0 errors across 5 workspace projects.
-- **Production Build:** 0 errors (all dist bundles emitted).
-- **Dependency Audit:** 5 upstream production vulnerabilities documented with vendor boundaries (locked by @earendil-works/pi-coding-agent shrinkwrap in @qloo/qloo-harness; Zod bounded by Fastify 1MB bodyLimit). Gate status: WARN / NOT_CLEAN.
-- **Boundaries:** Docker host execution, live Qloo network calls, and remote deployment remain truthfully labeled `NOT_VERIFIED`.
+### Official 1280x720 Devpost Thumbnail
+![LastRack Thumbnail](docs/assets/thumbnail.png)
 
 ---
 
-## 📚 Complete Documentation Index
+## Repository Guide
 
-- [Architecture & Data Pipeline](docs/ARCHITECTURE.md)
-- [Qloo MCP Integration & Canonical Contract Evidence](docs/LIVE_INTEGRATION_EVIDENCE.md)
-- [Production Deployment Guide](docs/DEPLOYMENT.md)
-- [Safe-Use & Responsible AI Framework](docs/SAFE_USE.md)
-- [Evaluation & Ablation Study ("Why Qloo?")](docs/EVALUATION.md)
-- [Hackathon Judge 3-Minute Tour](docs/JUDGE_TOUR.md)
-- [Devpost Submission Package](docs/DEVPOST_SUBMISSION.md)
-- [Submission Checklist & Truthful Audit Sign-Off](docs/SUBMISSION_CHECKLIST.md)
-- [Machine-Readable Verification Results](docs/verification-results.json)
+| Document | Purpose |
+| :--- | :--- |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Deep dive into monorepo structure, state machine lifecycle, and data flow |
+| [`docs/QLOO_INTEGRATION.md`](docs/QLOO_INTEGRATION.md) | Canonical MCP contract, tool schemas, and Single-Query Ranking Invariant |
+| [`docs/EVALUATION.md`](docs/EVALUATION.md) | "Why Qloo?" ablation methodology, metrics, and comparative baseline |
+| [`docs/SAFE_USE.md`](docs/SAFE_USE.md) | Ethical constraints, privacy safeguards, and claims validator rules |
+| [`docs/JUDGE_TOUR.md`](docs/JUDGE_TOUR.md) | Step-by-step 3-minute guided evaluation for hackathon judges |
+| [`docs/VIDEO_HANDOFF.md`](docs/VIDEO_HANDOFF.md) | Video production brief, recording coordinates, and unlisted YouTube instructions |
+| [`docs/DEVPOST_SUBMISSION.md`](docs/DEVPOST_SUBMISSION.md) | Complete copy-ready Devpost submission package |
+| [`docs/verification-results.json`](docs/verification-results.json) | Authoritative machine-readable verification evidence snapshot |
 
 ---
 
-## ⚖️ License
+## License & Acknowledgements
 
-MIT License. See [LICENSE](LICENSE) for details.
+- **License:** Released under the [MIT License](LICENSE).
+- **Acknowledgements:** Built for the **Qloo Devpost Hackathon (Build With AI)** utilizing Qloo's cultural intelligence layer and Model Context Protocol (MCP) harness.

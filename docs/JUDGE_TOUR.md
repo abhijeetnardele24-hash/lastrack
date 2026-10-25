@@ -8,18 +8,19 @@ Welcome to the **LastRack** evaluation walkthrough for the Qloo Agentic Hackatho
 
 ### Step 1: Clone and Install
 ```bash
-git clone <repository_url>
+git clone https://github.com/abhijeetnardele24-hash/lastrack.git
 cd lastrack
-npm install
+npm ci
 ```
 
 ### Step 2: Run Full Automated Verification Suite
 ```bash
-# Runs secret scanner, all 31 unit & integration tests, TypeScript typechecking, and production builds
+# Runs secret scanner, all 92 Vitest unit, contract, & verifier tests, TypeScript typechecking, and production builds
 npm run security-scan
 npm test
 npm run typecheck
 npm run build
+npm run test:e2e
 ```
 *(All suites pass out of the box with zero errors).*
 
