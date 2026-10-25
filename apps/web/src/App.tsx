@@ -18,6 +18,7 @@ import { ReceiptModal } from "./components/ReceiptModal";
 import { AboutModal } from "./components/AboutModal";
 
 export const App: React.FC = () => {
+  const isStaticDemo = import.meta.env.VITE_STATIC_DEMO === "true";
   const [brief, setBrief] = useState<InventoryBrief>(SYNTHETIC_JUDGE_BRIEF);
   const [currentRun, setCurrentRun] = useState<AgentRun | null>(DEMO_AGENT_RUN);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +34,16 @@ export const App: React.FC = () => {
   const { data: healthData } = useQuery<HealthResponse>({
     queryKey: ["health"],
     queryFn: async () => {
+      if (isStaticDemo) {
+        return {
+          status: "degraded",
+          qlooConfigured: false,
+          sourceMode: "DEMO_FIXTURE",
+          uptimeSeconds: 0,
+          version: "1.0.0",
+          timestamp: new Date().toISOString(),
+        };
+      }
       try {
         const res = await fetch("/api/health");
         if (!res.ok) throw new Error("Health check failed");
@@ -56,6 +67,14 @@ export const App: React.FC = () => {
   const handleStartRun = async (newBrief: InventoryBrief) => {
     setBrief(newBrief);
     setIsLoading(true);
+
+    if (isStaticDemo) {
+      window.setTimeout(() => {
+        setCurrentRun(DEMO_AGENT_RUN);
+        setIsLoading(false);
+      }, 650);
+      return;
+    }
 
     try {
       const res = await fetch("/api/runs", {

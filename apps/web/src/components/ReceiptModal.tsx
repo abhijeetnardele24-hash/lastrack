@@ -35,7 +35,21 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const linkedEvidence = evidence.filter((e) => plan.evidenceNodeIds.includes(e.id));
 
   const handlePrint = () => {
-    window.open(`/api/runs/${runId}/export/html?planId=${plan.id}`, "_blank");
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const escape = (value: string) => value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+    const actions = plan.actions.map((action) => `<li>${escape(action)}</li>`).join("");
+    const evidenceItems = linkedEvidence.map((node) =>
+      `<li><strong>${escape(node.evidenceClass)}</strong> — ${escape(node.statement)}</li>`
+    ).join("");
+    printWindow.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>LastRack Decision Receipt</title><style>body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:820px;margin:40px auto;padding:0 24px;color:#17211f;background:#f4f0e6}header{border-bottom:2px solid #17211f;padding-bottom:16px}h1{font-size:26px}h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;margin-top:28px}.meta,.notice{padding:14px;border:1px solid #b8b0a0;background:#fff}.notice{margin-top:28px;font-style:italic}code{overflow-wrap:anywhere}@media print{body{background:#fff;margin:0}}</style></head><body><header><strong>LASTRACK</strong><h1>${escape(plan.title)}</h1><p>Decision receipt · ${escape(runId)} · DEMO_FIXTURE</p></header><h2>Inventory brief</h2><div class="meta">${brief.unitsOnHand} units of ${escape(brief.itemName)} in ${escape(brief.city)} · Budget cap $${brief.budgetCap}</div><h2>Hypothesis</h2><p>${escape(plan.hypothesis)}</p><h2>Action checklist</h2><ol>${actions}</ol><h2>Evidence ledger</h2><ul>${evidenceItems}</ul><h2>Integrity</h2><code>${escape(plan.scoreContext?.rankDigest || "No rank digest")}</code><div class="notice"><strong>Mandatory notice:</strong> ${escape(MANDATORY_DISCLAIMER)}</div></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
   };
 
   const handleDownloadJson = () => {
