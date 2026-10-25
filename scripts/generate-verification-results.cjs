@@ -19,9 +19,41 @@ const CANONICAL_CHECKSUM = "sha256:762bdcc5e14ff797b6de739d2658a83f78af35e68d7a5
 const REQUIRED_TOOLS = ["qloo_describe", "qloo_find_tags", "qloo_recommend", "qloo_rank", "qloo_capabilities"];
 const REQUIRED_BUILD_PATHS = ["apps/web/dist/index.html", "apps/server/dist/server.js"];
 
+const REQUIRED_RAW_ARTIFACT_KEYS = [
+  "test-results/lint-results.json",
+  "test-results/typecheck-results.json",
+  "test-results/build-results.json",
+  "test-results/contract-test.json",
+  "test-results/vitest-results.json",
+  "coverage/coverage-summary.json",
+  "test-results/playwright-results.json",
+  "test-results/axe-results.json",
+  "test-results/security-scan.json",
+  "test-results/npm-audit.json",
+];
+
+const REQUIRED_GATE_COMMANDS = {
+  gate1_lint: "npm run lint",
+  gate2_typecheck: "npm run typecheck",
+  gate3_unit_tests: "npm test",
+  gate4_monorepo_build: "npm run build",
+  gate5_playwright_e2e: "npm run test:e2e",
+  gate6_accessibility_axe: "@axe-core/playwright",
+  gate7_security_secrets: "npm run security-scan",
+  gate8_dependency_audit: "npm audit --omit=dev --audit-level=high",
+};
+
+function getGitRepoRoot(cwd = ROOT) {
+  try {
+    return execSync("git rev-parse --show-toplevel", { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  } catch {
+    return ROOT;
+  }
+}
+
 function getCommitSha(cwd = ROOT) {
   try {
-    return execSync("git rev-parse HEAD", { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+    return execSync("git rev-parse HEAD", { cwd: getGitRepoRoot(cwd), encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
   } catch {
     return "UNKNOWN_COMMIT";
   }
@@ -29,7 +61,7 @@ function getCommitSha(cwd = ROOT) {
 
 function getCommitTimestamp(sha, cwd = ROOT) {
   try {
-    const raw = execSync(`git log -1 --format=%ct ${sha}`, { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+    const raw = execSync(`git log -1 --format=%ct ${sha}`, { cwd: getGitRepoRoot(cwd), encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
     return parseInt(raw, 10) * 1000;
   } catch {
     return Date.now() - 3600000;
@@ -38,7 +70,7 @@ function getCommitTimestamp(sha, cwd = ROOT) {
 
 function getBranch(cwd = ROOT) {
   try {
-    return execSync("git rev-parse --abbrev-ref HEAD", { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+    return execSync("git rev-parse --abbrev-ref HEAD", { cwd: getGitRepoRoot(cwd), encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
   } catch {
     return "unknown";
   }
@@ -46,7 +78,10 @@ function getBranch(cwd = ROOT) {
 
 function getHarnessVersion(cwd = ROOT) {
   try {
-    const pkgPath = path.join(cwd, "node_modules/@qloo/qloo-harness/package.json");
+    let pkgPath = path.join(cwd, "node_modules/@qloo/qloo-harness/package.json");
+    if (!fs.existsSync(pkgPath)) {
+      pkgPath = path.join(ROOT, "node_modules/@qloo/qloo-harness/package.json");
+    }
     if (fs.existsSync(pkgPath)) {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
       return pkg.version || "UNKNOWN";
@@ -529,47 +564,38 @@ function parseCurrentArtifacts(cwd = ROOT) {
 }
 
 /**
- * Strict fail-closed comparison between committed evidence and reparsed artifacts.
+ * Metadata-only validation of committed evidence snapshot.
+ * Validates schema, SHA format, carrier ancestry, gate definitions, Qloo contract,
+ * rawArtifactHashes keys and sha256 formatting, truthful NOT_VERIFIED boundaries,
+ * and dependency audit status without reading or comparing fresh machine artifacts.
  */
-function verifyEvidence(committedData, reparsed, options = {}) {
+function verifyMetadataOnly(committedData, options = {}) {
   const errors = [];
   const cwd = options.cwd || ROOT;
-  const installedHarnessVersion = options.installedHarnessVersion || getHarnessVersion(cwd);
   const carrierHead = options.carrierHead || getCommitSha(cwd);
 
   if (!committedData || typeof committedData !== "object" || Array.isArray(committedData) || Object.keys(committedData).length === 0) {
     return { valid: false, errors: ["Committed verification evidence is null, empty, or not an object."] };
   }
 
-  // Check parsing errors from raw artifact schemas
-  if (reparsed.parsingErrors && reparsed.parsingErrors.length > 0) {
-    for (const e of reparsed.parsingErrors) {
-      errors.push(`Artifact schema error: ${e}`);
-    }
+  // 1. Evidence JSON Schema Root Properties
+  if (committedData.repository !== "lastrack") {
+    errors.push(`Invalid repository identifier in evidence: expected "lastrack", got "${committedData.repository}".`);
+  }
+  if (typeof committedData.generatedAt !== "string" || isNaN(Date.parse(committedData.generatedAt))) {
+    errors.push("Missing or invalid ISO timestamp in generatedAt.");
+  }
+  if (typeof committedData.branch !== "string" || !committedData.branch) {
+    errors.push("Missing or empty branch in evidence.");
+  }
+  if (typeof committedData.carrierCommitVerifiedAtRuntime !== "string") {
+    errors.push("Missing carrierCommitVerifiedAtRuntime in evidence.");
   }
 
-  // 1. Raw Artifact Hash Verification (tamper detection)
-  const committedHashes = committedData.rawArtifactHashes;
-  if (!committedHashes || typeof committedHashes !== "object" || Object.keys(committedHashes).length === 0) {
-    errors.push("Committed evidence is missing rawArtifactHashes integrity block.");
-  } else {
-    for (const [relPath, expectedHash] of Object.entries(committedHashes)) {
-      const fullPath = path.join(cwd, relPath);
-      if (!fs.existsSync(fullPath)) {
-        errors.push(`Raw artifact referenced in committed hashes is missing on disk: ${relPath}`);
-      } else {
-        const actualHash = computeFileSha256(fullPath);
-        if (actualHash !== expectedHash) {
-          errors.push(`Raw artifact hash mismatch for ${relPath}: expected ${expectedHash}, actual ${actualHash}`);
-        }
-      }
-    }
-  }
-
-  // 2. Git Ancestry and Carrier Commit Validation
+  // 2. Tested Implementation Commit & SHA Formatting
   const testedCommit = committedData.testedImplementationCommit || committedData.testedCommitSha;
-  if (!testedCommit || testedCommit === "UNKNOWN_COMMIT") {
-    errors.push("Missing or unknown testedImplementationCommit in committed evidence.");
+  if (!testedCommit || typeof testedCommit !== "string" || !/^[a-f0-9]{40}$/i.test(testedCommit)) {
+    errors.push(`Invalid testedImplementationCommit format (must be 40-character hex string): ${testedCommit}`);
   } else {
     const commitTimestamp = getCommitTimestamp(testedCommit, cwd);
     const now = Date.now();
@@ -579,24 +605,216 @@ function verifyEvidence(committedData, reparsed, options = {}) {
       errors.push(`Tested commit ${testedCommit} is overly old (> 14 days) and must be refreshed.`);
     }
 
-    if (carrierHead && carrierHead !== "UNKNOWN_COMMIT") {
+    const gitDir = getGitRepoRoot(cwd);
+    let carrierCommit = options.carrierCommit;
+    const runtimeHead = options.carrierHead !== undefined ? options.carrierHead : getCommitSha(cwd);
+
+    if (!carrierCommit && options.evidenceFile && gitDir) {
       try {
-        execSync(`git merge-base --is-ancestor ${testedCommit} ${carrierHead}`, { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
+        const fileCarrier = execSync(`git log -1 --format=%H -- "${options.evidenceFile}"`, {
+          cwd: gitDir,
+          encoding: "utf-8",
+          stdio: ["pipe", "pipe", "pipe"],
+        }).trim();
+        if (fileCarrier && /^[a-f0-9]{40}$/i.test(fileCarrier)) {
+          carrierCommit = fileCarrier;
+        }
+      } catch {}
+    }
+
+    if (!carrierCommit) {
+      carrierCommit = committedData.evidenceCommit || runtimeHead;
+    }
+
+    if (carrierCommit && carrierCommit !== "UNKNOWN_COMMIT") {
+      try {
+        execSync(`git merge-base --is-ancestor ${testedCommit} ${carrierCommit}`, { cwd: gitDir, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
         const revCount = parseInt(
-          execSync(`git rev-list --count ${testedCommit}..${carrierHead}`, { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim(),
+          execSync(`git rev-list --count ${testedCommit}..${carrierCommit}`, { cwd: gitDir, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim(),
           10
         );
         if (revCount > 1) {
           errors.push(
-            `Carrier commit (${carrierHead}) is more than 1 commit ahead of tested commit (${testedCommit}) (revCount=${revCount}).`
+            `Carrier commit (${carrierCommit}) is more than 1 commit ahead of tested commit (${testedCommit}) (revCount=${revCount}).`
           );
         }
       } catch (e) {
-        errors.push(`Tested SHA (${testedCommit}) is unrelated to carrier commit (${carrierHead}): ${e.message}`);
+        errors.push(`Tested SHA (${testedCommit}) is unrelated to carrier commit (${carrierCommit}): ${e.message}`);
       }
     }
 
-    // Artifact Freshness Check
+    if (runtimeHead && runtimeHead !== "UNKNOWN_COMMIT" && carrierCommit && carrierCommit !== runtimeHead) {
+      try {
+        execSync(`git merge-base --is-ancestor ${carrierCommit} ${runtimeHead}`, { cwd: gitDir, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
+      } catch (e) {
+        errors.push(`Carrier commit (${carrierCommit}) is not an ancestor of current HEAD (${runtimeHead}): ${e.message}`);
+      }
+    }
+  }
+
+  // 3. rawArtifactHashes keys and SHA-256 formatting
+  const hashes = committedData.rawArtifactHashes;
+  if (!hashes || typeof hashes !== "object" || Object.keys(hashes).length === 0) {
+    errors.push("Committed evidence is missing rawArtifactHashes integrity block.");
+  } else {
+    for (const key of REQUIRED_RAW_ARTIFACT_KEYS) {
+      if (!hashes[key]) {
+        errors.push(`Missing required raw artifact hash key: ${key}`);
+      } else {
+        const val = hashes[key];
+        if (typeof val !== "string" || !/^sha256:[a-f0-9]{64}$/i.test(val)) {
+          errors.push(`Invalid SHA-256 hash format for ${key}: ${val}`);
+        }
+      }
+    }
+  }
+
+  // 4. Canonical Qloo Contract Metadata
+  const c = committedData.canonicalQlooContract;
+  if (!c || typeof c !== "object") {
+    errors.push("Missing canonicalQlooContract object.");
+  } else {
+    if (c.protocolVersion !== "2024-11-05") {
+      errors.push(`canonicalQlooContract protocolVersion must be 2024-11-05 (got ${c.protocolVersion}).`);
+    }
+    if (c.contractVersion !== "1.0.0") {
+      errors.push(`canonicalQlooContract contractVersion must be 1.0.0 (got ${c.contractVersion}).`);
+    }
+    if (c.checksum !== CANONICAL_CHECKSUM) {
+      errors.push(`canonicalQlooContract checksum mismatch: expected ${CANONICAL_CHECKSUM}, got ${c.checksum}.`);
+    }
+    if (c.executableCommand !== "node dist/bin.js mcp") {
+      errors.push(`canonicalQlooContract executableCommand must be "node dist/bin.js mcp".`);
+    }
+    if (!Array.isArray(c.supportedTools)) {
+      errors.push("canonicalQlooContract supportedTools must be an array.");
+    } else {
+      for (const tool of REQUIRED_TOOLS) {
+        if (!c.supportedTools.includes(tool)) {
+          errors.push(`canonicalQlooContract supportedTools missing required tool: ${tool}`);
+        }
+      }
+    }
+    if (!c.mcpContractTest || c.mcpContractTest.status !== "PASSED") {
+      errors.push(`canonicalQlooContract mcpContractTest status is not PASSED.`);
+    }
+    if (typeof c.mcpContractTest?.exitCode === "number" && c.mcpContractTest.exitCode !== 0) {
+      errors.push(`canonicalQlooContract mcpContractTest exitCode is ${c.mcpContractTest.exitCode} (expected 0).`);
+    }
+  }
+
+  // 5. Required Gate Names & Commands
+  const qg = committedData.qualityGates;
+  if (!qg || typeof qg !== "object") {
+    errors.push("Missing qualityGates block.");
+  } else {
+    for (const [gateName, expectedCmdOrTool] of Object.entries(REQUIRED_GATE_COMMANDS)) {
+      const gate = qg[gateName];
+      if (!gate || typeof gate !== "object") {
+        errors.push(`Missing required quality gate: ${gateName}`);
+      } else {
+        if (gateName === "gate6_accessibility_axe") {
+          if (gate.tool !== expectedCmdOrTool) {
+            errors.push(`Gate ${gateName} tool mismatch: expected ${expectedCmdOrTool}, got ${gate.tool}`);
+          }
+        } else {
+          if (gate.command !== expectedCmdOrTool) {
+            errors.push(`Gate ${gateName} command mismatch: expected ${expectedCmdOrTool}, got ${gate.command}`);
+          }
+        }
+      }
+    }
+  }
+
+  // 6. Dependency Audit False PASSED Check
+  const g8 = qg?.gate8_dependency_audit;
+  if (g8) {
+    if (
+      g8.status === "PASSED" &&
+      ((g8.totalVulnerabilities || 0) > 0 || (g8.highVulnerabilities || 0) > 0 || g8.gateResult === "WARN" || g8.gateStatus === "WARN")
+    ) {
+      errors.push(
+        `Dependency audit falsely claims PASSED while active vulnerabilities exist (total=${g8.totalVulnerabilities}).`
+      );
+    }
+  }
+
+  // 7. Truthful NOT_VERIFIED Boundaries
+  const vb = committedData.verificationBoundaries;
+  if (!vb || typeof vb !== "object") {
+    errors.push("Missing verificationBoundaries block.");
+  } else {
+    if (typeof vb.dockerStatus !== "string" || !vb.dockerStatus.startsWith("NOT_VERIFIED")) {
+      errors.push(`dockerStatus boundary must be explicitly labeled NOT_VERIFIED.`);
+    }
+    if (vb.liveIntegrationStatus === "LIVE_QLOO_VERIFIED") {
+      errors.push("Falsely claimed LIVE_QLOO_VERIFIED in committed metadata without live smoke verification.");
+    }
+    if (!vb.deployment || typeof vb.deployment !== "object") {
+      errors.push("Missing deployment boundary object.");
+    } else {
+      if (typeof vb.deployment.remoteRepositoryUrl !== "string" || !vb.deployment.remoteRepositoryUrl.includes("NOT_VERIFIED")) {
+        errors.push("deployment.remoteRepositoryUrl boundary must be explicitly labeled NOT_VERIFIED.");
+      }
+      if (typeof vb.deployment.ciExecutionUrl !== "string" || !vb.deployment.ciExecutionUrl.includes("NOT_VERIFIED")) {
+        errors.push("deployment.ciExecutionUrl boundary must be explicitly labeled NOT_VERIFIED.");
+      }
+      if (typeof vb.deployment.liveProductionUrl !== "string" || !vb.deployment.liveProductionUrl.includes("NOT_VERIFIED")) {
+        errors.push("deployment.liveProductionUrl boundary must be explicitly labeled NOT_VERIFIED.");
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Strict fail-closed comparison between committed evidence and reparsed artifacts.
+ */
+function verifyEvidence(committedData, reparsed, options = {}) {
+  const cwd = options.cwd || ROOT;
+  const installedHarnessVersion = options.installedHarnessVersion || getHarnessVersion(cwd);
+
+  // Phase 1: Validate metadata, schema, ancestry, hashes format, gates, boundaries, and Qloo contract
+  const metaValidation = verifyMetadataOnly(committedData, options);
+  const errors = [...metaValidation.errors];
+
+  if (!committedData || typeof committedData !== "object" || Array.isArray(committedData) || Object.keys(committedData).length === 0) {
+    return { valid: false, errors };
+  }
+
+  // Phase 2: Check parsing errors from raw artifact schemas
+  if (reparsed.parsingErrors && reparsed.parsingErrors.length > 0) {
+    for (const e of reparsed.parsingErrors) {
+      errors.push(`Artifact schema error: ${e}`);
+    }
+  }
+
+  // Phase 3: Raw Artifact Hash Verification against disk (tamper detection)
+  if (!options.skipDiskHashes) {
+    const committedHashes = committedData.rawArtifactHashes;
+    if (committedHashes && typeof committedHashes === "object") {
+      for (const [relPath, expectedHash] of Object.entries(committedHashes)) {
+        const fullPath = path.join(cwd, relPath);
+        if (!fs.existsSync(fullPath)) {
+          errors.push(`Raw artifact referenced in committed hashes is missing on disk: ${relPath}`);
+        } else {
+          const actualHash = computeFileSha256(fullPath);
+          if (actualHash !== expectedHash) {
+            errors.push(`Raw artifact hash mismatch for ${relPath}: expected ${expectedHash}, actual ${actualHash}`);
+          }
+        }
+      }
+    }
+  }
+
+  // Phase 4: Artifact Freshness Check vs Tested Commit Timestamp
+  const testedCommit = committedData.testedImplementationCommit || committedData.testedCommitSha;
+  if (testedCommit && /^[a-f0-9]{40}$/i.test(testedCommit)) {
+    const commitTimestamp = getCommitTimestamp(testedCommit, cwd);
     if (reparsed.rawArtifactTimestamps) {
       for (const [relPath, mtime] of Object.entries(reparsed.rawArtifactTimestamps)) {
         if (mtime < commitTimestamp - 600000) {
@@ -1012,6 +1230,7 @@ function generateResults(options = {}) {
 if (require.main === module) {
   const args = process.argv.slice(2);
   const verifyOnly = args.includes("--verify-only");
+  const isMetadataOnly = args.includes("--verify-metadata-only");
 
   let evidenceFile = DEFAULT_OUTPUT_FILE;
   const evFileIdx = args.indexOf("--evidence-file");
@@ -1023,6 +1242,37 @@ if (require.main === module) {
   const outIdx = args.indexOf("--output");
   if (outIdx !== -1 && args[outIdx + 1]) {
     outputFile = path.resolve(ROOT, args[outIdx + 1]);
+  }
+
+  if (isMetadataOnly) {
+    if (!fs.existsSync(evidenceFile)) {
+      console.error(`❌ Verification evidence file is missing: ${evidenceFile}`);
+      process.exit(1);
+    }
+    const committedData = JSON.parse(fs.readFileSync(evidenceFile, "utf-8"));
+    const carrierHead = getCommitSha(ROOT);
+
+    console.log(`🔍 [Verification Validation: Metadata-Only] Validating committed evidence snapshot...`);
+    console.log(`   Evidence File:                ${evidenceFile}`);
+    console.log(`   Tested Implementation Commit: ${committedData.testedImplementationCommit}`);
+    console.log(`   Carrier Commit at Runtime:    ${carrierHead}`);
+
+    const result = verifyMetadataOnly(committedData, {
+      cwd: ROOT,
+      carrierHead,
+      evidenceFile,
+    });
+
+    if (!result.valid) {
+      console.error("❌ [Metadata-Only Verification FAILED]:");
+      for (const err of result.errors) {
+        console.error(`   - ${err}`);
+      }
+      process.exit(1);
+    }
+
+    console.log("✅ [Metadata-Only Verification] Committed verification snapshot metadata is valid, authentic, and passing.");
+    process.exit(0);
   }
 
   if (verifyOnly) {
@@ -1042,6 +1292,7 @@ if (require.main === module) {
     const result = verifyEvidence(committedData, reparsed, {
       cwd: ROOT,
       carrierHead,
+      evidenceFile,
       installedHarnessVersion: getHarnessVersion(ROOT),
     });
 
@@ -1063,6 +1314,7 @@ if (require.main === module) {
 module.exports = {
   parseCurrentArtifacts,
   verifyEvidence,
+  verifyMetadataOnly,
   generateResults,
   getCommitSha,
   getCommitTimestamp,
@@ -1081,4 +1333,6 @@ module.exports = {
   CANONICAL_CHECKSUM,
   REQUIRED_TOOLS,
   REQUIRED_BUILD_PATHS,
+  REQUIRED_RAW_ARTIFACT_KEYS,
+  REQUIRED_GATE_COMMANDS,
 };

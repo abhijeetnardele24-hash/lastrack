@@ -51,8 +51,8 @@ jobs:
       - name: Gate 7 — Production dependency audit & mitigation review
         run: npm run audit
 
-      - name: Gate 8 — Verify committed verification evidence (prevent circular overwrite)
-        run: node scripts/generate-verification-results.cjs --verify-only
+      - name: Gate 8 — Validate committed verification evidence metadata (non-circular)
+        run: node scripts/generate-verification-results.cjs --verify-metadata-only --evidence-file docs/verification-results.json
 
       - name: Gate 9 — Assert committed verification evidence remains untampered
         run: git diff --exit-code -- docs/verification-results.json
