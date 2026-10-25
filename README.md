@@ -240,10 +240,10 @@ Open `http://localhost:5173` in your browser. The benchmark scenario is preloade
 ### 3. Optional Live Qloo Execution
 To execute against the live Qloo API instead of verified fixtures:
 ```bash
-export QLOO_API_KEY="your_actual_api_key_here"
+export QLOO_API_KEY="your_qloo_api_key_here"
 npm run dev
 ```
-*(On Windows PowerShell: `$env:QLOO_API_KEY="your_actual_api_key_here"`).*
+*(On Windows PowerShell: `$env:QLOO_API_KEY="your_qloo_api_key_here"`).*
 
 When the key is present, LastRack executes real live MCP calls and reports `sourceMode: "LIVE_QLOO"`. When omitted, LastRack runs safely in clearly labeled `DEMO_FIXTURE` mode.
 

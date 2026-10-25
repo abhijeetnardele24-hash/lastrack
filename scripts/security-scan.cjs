@@ -48,8 +48,13 @@ function scanDirectory(dirPath, violations = []) {
         const content = fs.readFileSync(fullPath, "utf-8");
         for (const pattern of SECRET_PATTERNS) {
           if (pattern.regex.test(content)) {
-            // Ignore placeholders
-            if (content.includes("your_qloo_api_key_here") || content.includes("your_api_key_here")) continue;
+            // Ignore standard documentation placeholders
+            if (
+              content.includes("your_qloo_api_key_here") ||
+              content.includes("your_api_key_here") ||
+              content.includes("your_actual_api_key_here") ||
+              content.includes("mock-qloo-api-key")
+            ) continue;
             violations.push({
               source: path.relative(ROOT_DIR, fullPath),
               rule: pattern.name,
@@ -78,7 +83,12 @@ function scanGitHistory(violations = []) {
         const addedLine = line.substring(1);
         for (const pattern of SECRET_PATTERNS) {
           if (pattern.regex.test(addedLine)) {
-            if (addedLine.includes("your_qloo_api_key_here") || addedLine.includes("mock-qloo-api-key")) continue;
+            if (
+              addedLine.includes("your_qloo_api_key_here") ||
+              addedLine.includes("your_api_key_here") ||
+              addedLine.includes("your_actual_api_key_here") ||
+              addedLine.includes("mock-qloo-api-key")
+            ) continue;
             violations.push({
               source: `git commit ${currentCommit}`,
               rule: pattern.name,
