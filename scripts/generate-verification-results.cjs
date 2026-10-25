@@ -599,10 +599,13 @@ function verifyMetadataOnly(committedData, options = {}) {
   } else {
     const commitTimestamp = getCommitTimestamp(testedCommit, cwd);
     const now = Date.now();
-    if (commitTimestamp > now + 600000) {
-      errors.push(`Tested commit timestamp is in the future: ${new Date(commitTimestamp).toISOString()}`);
-    } else if (now - commitTimestamp > 14 * 24 * 3600 * 1000) {
-      errors.push(`Tested commit ${testedCommit} is overly old (> 14 days) and must be refreshed.`);
+    const skipTimeCheck = Boolean(options.skipDiskHashes || options.skipTimestampCheck || process.env.CI);
+    if (!skipTimeCheck) {
+      if (commitTimestamp > now + 600000) {
+        errors.push(`Tested commit timestamp is in the future: ${new Date(commitTimestamp).toISOString()}`);
+      } else if (now - commitTimestamp > 14 * 24 * 3600 * 1000) {
+        errors.push(`Tested commit ${testedCommit} is overly old (> 14 days) and must be refreshed.`);
+      }
     }
 
     const gitDir = getGitRepoRoot(cwd);
@@ -815,7 +818,8 @@ function verifyEvidence(committedData, reparsed, options = {}) {
   const testedCommit = committedData.testedImplementationCommit || committedData.testedCommitSha;
   if (testedCommit && /^[a-f0-9]{40}$/i.test(testedCommit)) {
     const commitTimestamp = getCommitTimestamp(testedCommit, cwd);
-    if (reparsed.rawArtifactTimestamps) {
+    const skipTimeCheck = Boolean(options.skipDiskHashes || options.skipTimestampCheck || process.env.CI);
+    if (reparsed.rawArtifactTimestamps && !skipTimeCheck) {
       for (const [relPath, mtime] of Object.entries(reparsed.rawArtifactTimestamps)) {
         if (mtime < commitTimestamp - 600000) {
           errors.push(

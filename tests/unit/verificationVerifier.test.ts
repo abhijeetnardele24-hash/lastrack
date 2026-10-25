@@ -311,8 +311,8 @@ describe("Verification Results Comparative Verifier Regression Suite", () => {
         skipDiskHashes: true,
       });
 
+      expect(result.errors).toEqual([]);
       expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
     });
 
     it("rejects changed coverage values without rounding or defaults", () => {
