@@ -780,6 +780,7 @@ function verifyMetadataOnly(committedData, options = {}) {
 function verifyEvidence(committedData, reparsed, options = {}) {
   const cwd = options.cwd || ROOT;
   const installedHarnessVersion = options.installedHarnessVersion || getHarnessVersion(cwd);
+  const skipDiskHashes = Boolean(options.skipDiskHashes);
 
   // Phase 1: Validate metadata, schema, ancestry, hashes format, gates, boundaries, and Qloo contract
   const metaValidation = verifyMetadataOnly(committedData, options);
@@ -987,9 +988,11 @@ function verifyEvidence(committedData, reparsed, options = {}) {
     if (JSON.stringify(committedArtifacts) !== JSON.stringify(reparsedArtifacts)) {
       errors.push(`Build artifact paths mismatch between committed evidence and raw build artifact: reparsed=${JSON.stringify(reparsedArtifacts)}, committed=${JSON.stringify(committedArtifacts)}`);
     }
-    for (const p of reparsedArtifacts) {
-      if (!fs.existsSync(path.join(cwd, p))) {
-        errors.push(`Build distribution file missing on disk: ${p}`);
+    if (!skipDiskHashes) {
+      for (const p of reparsedArtifacts) {
+        if (!fs.existsSync(path.join(cwd, p))) {
+          errors.push(`Build distribution file missing on disk: ${p}`);
+        }
       }
     }
   }
