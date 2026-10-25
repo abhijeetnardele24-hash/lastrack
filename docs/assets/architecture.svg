@@ -52,8 +52,12 @@
     <g transform="translate(20, 345)">
       <rect width="240" height="115" rx="6" fill="#14201C" stroke="#2C453C"/>
       <text x="14" y="26" fill="#889890" font-size="11" font-weight="700">DISCLAIMER ENFORCEMENT</text>
-      <text x="14" y="48" fill="#F2EFE7" font-size="11" font-style="italic">"Planning hypothesis—not a sales forecast or endorsement by the named entities."</text>
-      <text x="14" y="98" fill="#1F6B4F" font-size="10" font-weight="600">MANDATORY EXPORT STAMP</text>
+      <text fill="#F2EFE7" font-size="11" font-style="italic">
+        <tspan x="14" y="48">"Planning hypothesis—not a sales</tspan>
+        <tspan x="14" y="64">forecast or endorsement by the</tspan>
+        <tspan x="14" y="80">named entities."</tspan>
+      </text>
+      <text x="14" y="100" fill="#1F6B4F" font-size="10" font-weight="600">MANDATORY EXPORT STAMP</text>
     </g>
   </g>
 

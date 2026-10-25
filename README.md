@@ -178,7 +178,8 @@ LastRack enforces this principle in code (`packages/domain/src/singleQueryRank.t
 
 ## Architecture & System Design
 
-![LastRack Architecture](docs/assets/architecture.png)
+[![LastRack Architecture](docs/assets/architecture.png)](docs/assets/architecture.svg)
+*Click diagram to view vector SVG.*
 
 LastRack is architected as a modular TypeScript monorepo with strict boundary separation:
 

@@ -34,23 +34,36 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
   try {
-    // 1. Render architecture.png from architecture.svg
-    console.log("Rendering docs/assets/architecture.png from SVG...");
+    // 1. Render architecture.png from architecture.svg (High-DPI Retina resolution)
+    console.log("Rendering docs/assets/architecture.png from SVG at 2x Retina resolution...");
+    const archPage = await browser.newPage({
+      viewport: { width: 1100, height: 680 },
+      deviceScaleFactor: 2
+    });
     const svgContent = fs.readFileSync(path.join(ASSETS_DIR, "architecture.svg"), "utf-8");
-    await page.setContent(`
+    await archPage.setContent(`
       <!DOCTYPE html>
       <html>
-        <head><style>body { margin: 0; background: #14201C; }</style></head>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { background: #14201C; overflow: hidden; width: 1100px; height: 680px; }
+            #svg-container { width: 1100px; height: 680px; display: block; }
+            svg { width: 1100px; height: 680px; display: block; }
+          </style>
+        </head>
         <body>
-          <div id="svg-container" style="display: inline-block;">
+          <div id="svg-container">
             ${svgContent}
           </div>
         </body>
       </html>
     `);
-    const svgElem = await page.locator("#svg-container");
+    const svgElem = archPage.locator("#svg-container");
     await svgElem.screenshot({ path: path.join(ASSETS_DIR, "architecture.png") });
-    console.log("✅ architecture.png rendered.");
+    await archPage.close();
+    console.log("✅ architecture.png rendered (2200x1360).");
 
     // 2. Capture Real App Screenshots
     const appUrl = "http://127.0.0.1:3002";
