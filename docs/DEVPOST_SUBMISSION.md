@@ -1,6 +1,4 @@
-# LastRack — Devpost Hackathon Submission Package (Preparation Only)
-
-> **Important Boundary Notice:** This document contains the complete, copy-ready text for the Devpost submission form. The coding agent does **NOT** open or submit the Devpost form online; all online submission actions are performed separately by the project owner.
+# LastRack — Devpost Hackathon Submission Package
 
 ---
 
@@ -14,7 +12,7 @@ Before discounting slow inventory, LastRack uses Qloo cultural intelligence to d
 
 ### Links & Video Placeholders
 - **GitHub Repository:** [https://github.com/abhijeetnardele24-hash/lastrack](https://github.com/abhijeetnardele24-hash/lastrack)
-- **Live Demo URL:** `[LIVE_DEMO_URL_PLACEHOLDER — e.g. https://lastrack.onrender.com or cloudflare tunnel]`
+- **Live Demo URL:** [https://abhijeetnardele24-hash.github.io/lastrack/](https://abhijeetnardele24-hash.github.io/lastrack/) — public `DEMO_FIXTURE` judge build; no private key required
 - **Unlisted YouTube Video URL:** `[UNLISTED_YOUTUBE_VIDEO_URL_PLACEHOLDER — Video duration: ~2:30, 1080p, Unlisted]`
 
 ### Submission Asset Paths
@@ -151,10 +149,11 @@ We discovered that cultural taste graphs operate like an intuitive merchandiser'
 
 ## 4. Final Submission Checklist
 
-- [ ] Repository is public at [https://github.com/abhijeetnardele24-hash/lastrack](https://github.com/abhijeetnardele24-hash/lastrack).
-- [ ] Tag `v1.6.0-ci-dual-mode-verified` (and release tags) pushed to GitHub.
-- [ ] GitHub Actions workflow has completed successfully.
-- [ ] Video recorded following `docs/VIDEO_HANDOFF.md` (~2:30, 1080p, clear audio).
+- [x] Repository is public at [https://github.com/abhijeetnardele24-hash/lastrack](https://github.com/abhijeetnardele24-hash/lastrack).
+- [x] Release tags pushed to GitHub.
+- [x] GitHub Actions workflow has completed successfully.
+- [x] Public judge demo deployed at [https://abhijeetnardele24-hash.github.io/lastrack/](https://abhijeetnardele24-hash.github.io/lastrack/).
+- [x] Video rendered following `docs/VIDEO_HANDOFF.md` (2:25, 1080p, 30 fps, normalized audio, captions).
 - [ ] Video uploaded to YouTube with visibility set to **UNLISTED**.
 - [ ] YouTube URL pasted into the Devpost submission form.
 - [ ] Devpost form fields filled using the copy-ready sections above.

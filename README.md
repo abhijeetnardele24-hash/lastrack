@@ -14,6 +14,7 @@
 ## Navigation & Quick Links
 
 - [Live GitHub Repository](https://github.com/abhijeetnardele24-hash/lastrack)
+- [Live Judge Demo](https://abhijeetnardele24-hash.github.io/lastrack/) — public `DEMO_FIXTURE` build; no private key required
 - [System Architecture](docs/ARCHITECTURE.md)
 - [Judge 3-Minute Tour](docs/JUDGE_TOUR.md)
 - [Qloo Integration & MCP Contract](docs/QLOO_INTEGRATION.md)
@@ -79,6 +80,8 @@ Evidence Ledger & Decision Receipt with SHA-256 Audit Digest
 ---
 
 ## Demonstration Scenario
+
+Try the public, externally hosted judge build at **[abhijeetnardele24-hash.github.io/lastrack](https://abhijeetnardele24-hash.github.io/lastrack/)**. It deliberately runs in visibly labeled `DEMO_FIXTURE` mode so the complete workflow remains usable without exposing a Qloo API key or implying an unverified live response.
 
 LastRack ships with a preloaded, verified benchmark scenario representing an independent boutique in Brooklyn:
 
