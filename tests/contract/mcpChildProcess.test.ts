@@ -35,6 +35,12 @@ describe("Real MCP Child-Process Contract Handshake Suite", () => {
     expect(caps?.supportedOperations).toContain("find_tags");
     expect(caps?.supportedOperations).toContain("recommend");
     expect(caps?.supportedOperations).toContain("rank");
+    expect(caps?.toolsList).toBeDefined();
+    expect(caps?.toolsList).toContain("qloo_describe");
+    expect(caps?.toolsList).toContain("qloo_find_tags");
+    expect(caps?.toolsList).toContain("qloo_recommend");
+    expect(caps?.toolsList).toContain("qloo_rank");
+    expect(caps?.toolsList).toContain("qloo_capabilities");
 
     await client.shutdown();
     expect(client.isReady()).toBe(false);
@@ -55,6 +61,7 @@ describe("Real MCP Child-Process Contract Handshake Suite", () => {
           canonicalChecksum: EXPECTED_CANONICAL_CHECKSUM,
           adapterReady: true,
           supportedOperations: caps?.supportedOperations,
+          toolsList: caps?.toolsList,
         },
         null,
         2

@@ -11,13 +11,22 @@ export const REQUIRED_OPERATIONS = ["describe", "find_tags", "recommend", "rank"
 
 export function getInstalledHarnessVersion(): string {
   try {
-    const pkgUrl = import.meta.resolve("@qloo/qloo-harness/package.json");
-    const pkgPath = fileURLToPath(pkgUrl);
-    const content = fs.readFileSync(pkgPath, "utf-8");
-    const parsed = JSON.parse(content);
-    return parsed.version || "0.1.26";
+    let pkgPath: string | null = null;
+    try {
+      const entryUrl = import.meta.resolve("@qloo/qloo-harness");
+      const entryPath = fileURLToPath(entryUrl);
+      pkgPath = path.resolve(path.dirname(entryPath), "..", "package.json");
+    } catch {
+      pkgPath = path.resolve(process.cwd(), "node_modules/@qloo/qloo-harness/package.json");
+    }
+    if (pkgPath && fs.existsSync(pkgPath)) {
+      const content = fs.readFileSync(pkgPath, "utf-8");
+      const parsed = JSON.parse(content);
+      return parsed.version || "UNKNOWN";
+    }
+    return "UNKNOWN";
   } catch {
-    return "0.1.26";
+    return "UNKNOWN";
   }
 }
 
@@ -77,6 +86,7 @@ export interface CapabilitiesMetadata {
   contractChecksum: string;
   ready: boolean;
   supportedOperations: string[];
+  toolsList?: string[];
 }
 
 export class QlooMcpClient {
@@ -190,7 +200,20 @@ export class QlooMcpClient {
         // 2. Send notifications/initialized
         this.sendNotification("notifications/initialized", {});
 
-        // 3. Inspect capabilities & contract checksum
+        // 3. Actually call and validate tools/list
+        const toolsResponse = await this.callJsonRpc("tools/list", {}, 6000);
+        if (!toolsResponse || !Array.isArray(toolsResponse.tools)) {
+          throw new Error("Invalid response to tools/list from harness.");
+        }
+        const toolNames = toolsResponse.tools.map((t: any) => t.name);
+        const requiredTools = ["qloo_describe", "qloo_find_tags", "qloo_recommend", "qloo_rank", "qloo_capabilities"];
+        for (const rt of requiredTools) {
+          if (!toolNames.includes(rt)) {
+            throw new Error(`Required MCP tool "${rt}" missing from tools/list: [${toolNames.join(", ")}]`);
+          }
+        }
+
+        // 4. Inspect capabilities & contract checksum
         const capResult = await this.callJsonRpc("tools/call", {
           name: "qloo_capabilities",
           arguments: {},
@@ -221,6 +244,7 @@ export class QlooMcpClient {
           contractChecksum: capData.contract_checksum,
           ready: true,
           supportedOperations: supportedOps,
+          toolsList: toolNames,
         };
 
         this.mcpReady = true;

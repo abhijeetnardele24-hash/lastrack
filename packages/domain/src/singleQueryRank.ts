@@ -56,31 +56,80 @@ export function computeRankDigest(input: RankDigestInput): string {
 }
 
 /**
- * Validates that all candidate options within a domain or category were evaluated in a single Qloo batch call.
- * Comparing scores across different request IDs is an invalid operation under Qloo's ranking model.
+ * Infers the entity domain for an activation plan from scoreContext or plan mechanism.
+ */
+export function inferPlanDomain(plan: ActivationPlan): string {
+  if (plan.scoreContext?.domain) {
+    return plan.scoreContext.domain.toLowerCase().trim();
+  }
+  const batchId = plan.scoreContext?.batchRankCallId || "";
+  const match = batchId.match(/^batch_([a-zA-Z0-9]+)_/);
+  if (match && match[1]) {
+    return match[1].toLowerCase().trim();
+  }
+  if (plan.mechanism === "DISPLAY") return "movie";
+  if (plan.mechanism === "BUNDLE") return "brand";
+  if (plan.mechanism === "LOCAL_ACTIVATION") return "place";
+  return "general";
+}
+
+/**
+ * Validates that all candidate options within a comparable entity domain were evaluated
+ * in a single Qloo batch call ("one qloo_rank batch per comparable entity domain").
+ *
+ * Rules:
+ * 1. Multiple domains may correctly use different batch IDs.
+ * 2. Plans in the same entity domain must share one batch ID.
+ * 3. Cross-domain scores are never directly compared.
+ * 4. Multiple batch IDs inside one domain fail the invariant.
+ * 5. Missing rank evidence is accepted only when unranked/degraded.
  */
 export function validateSingleQueryRankingInvariant(
   plans: ActivationPlan[]
-): { valid: boolean; batchIds: string[]; error?: string } {
-  const batchIds = new Set<string>();
+): {
+  valid: boolean;
+  batchIds: string[];
+  batchIdsByDomain: Record<string, string[]>;
+  error?: string;
+} {
+  const batchIdsByDomain: Record<string, Set<string>> = {};
+  const allBatchIds = new Set<string>();
 
   for (const plan of plans) {
-    if (plan.scoreContext?.batchRankCallId) {
-      batchIds.add(plan.scoreContext.batchRankCallId);
+    // Missing rank evidence is accepted when unranked/degraded
+    if (!plan.scoreContext?.batchRankCallId) {
+      continue;
     }
+
+    const domain = inferPlanDomain(plan);
+    const batchId = plan.scoreContext.batchRankCallId;
+    allBatchIds.add(batchId);
+
+    if (!batchIdsByDomain[domain]) {
+      batchIdsByDomain[domain] = new Set<string>();
+    }
+    batchIdsByDomain[domain].add(batchId);
   }
 
-  // All plans generated from the same run batch should reference consistent single-batch context
-  if (batchIds.size > 1) {
-    return {
-      valid: false,
-      batchIds: Array.from(batchIds),
-      error: `Cross-request comparison detected! Plans reference multiple distinct batch IDs: ${Array.from(batchIds).join(", ")}. Invariant requires a single batch call for comparable rankings.`,
-    };
+  // Check each domain: all plans inside the same domain MUST share one single batch ID
+  for (const [domain, domainBatchIds] of Object.entries(batchIdsByDomain)) {
+    if (domainBatchIds.size > 1) {
+      return {
+        valid: false,
+        batchIds: Array.from(allBatchIds),
+        batchIdsByDomain: Object.fromEntries(
+          Object.entries(batchIdsByDomain).map(([d, set]) => [d, Array.from(set)])
+        ),
+        error: `Cross-request comparison detected within domain "${domain}"! Plans in the same entity domain reference multiple distinct batch IDs: ${Array.from(domainBatchIds).join(", ")}. Invariant requires one qloo_rank batch per comparable entity domain.`,
+      };
+    }
   }
 
   return {
     valid: true,
-    batchIds: Array.from(batchIds),
+    batchIds: Array.from(allBatchIds),
+    batchIdsByDomain: Object.fromEntries(
+      Object.entries(batchIdsByDomain).map(([d, set]) => [d, Array.from(set)])
+    ),
   };
 }

@@ -45,7 +45,7 @@ The agent is implemented as a **deterministic, bounded state machine** (`Bounded
 [ GENERATING_CANDIDATES ] (Calls qloo_recommend for cross-domain entities in film, fashion, music, places)
    │
    ▼
-[ RANKING_CANDIDATES ] ─ (Calls qloo_rank in ONE unified batch query — enforcing the Single-Query Invariant)
+[ RANKING_CANDIDATES ] ─ (Calls qloo_rank in one batch per entity domain — enforcing Single-Query Invariant)
    │
    ▼
 [ CONSTRAINT_CHECK ] ─── (Evaluates budget cap, maximum markdown, and merchant forbidden tactics)
@@ -68,13 +68,15 @@ If an error or edge condition occurs:
 
 A core architectural principle in LastRack is the **Single-Query Ranking Invariant**:
 
-> **Rule:** All candidate interventions within a comparison set MUST be scored and ranked inside a single, unified `qloo_rank` batch call.
+> **Rule:** One `qloo_rank` batch per comparable entity domain.
 
 ### Why this is mathematically mandatory:
-Qloo affinity scores represent affinity *relative to the input signal and the candidate set*. Comparing raw scores across different batch calls or different timestamps is invalid. LastRack enforces this invariant in code (`singleQueryRank.ts`):
-1. Every plan records its `batchRankCallId`.
-2. The invariant validator checks that `Set(plans.map(p => p.scoreContext.batchRankCallId)).size === 1`.
-3. If an attempt is made to evaluate options across different calls, the run fails critique.
+Qloo affinity scores represent affinity *relative to the input signal and the candidate set within a specific domain*. Comparing raw scores across different batch calls or comparing cross-domain scores directly is mathematically invalid. LastRack enforces this invariant in code (`singleQueryRank.ts`):
+1. Multiple domains may correctly use different batch IDs.
+2. Plans in the same entity domain must share one batch ID.
+3. Cross-domain scores are never directly compared.
+4. Multiple batch IDs inside one domain fail validation.
+5. Missing rank evidence is accepted only when clearly unranked or degraded.
 
 ---
 

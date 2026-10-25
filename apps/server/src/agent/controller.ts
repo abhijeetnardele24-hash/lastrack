@@ -36,6 +36,12 @@ export class BoundedAgentController {
   private listeners: EventListener[] = [];
   private cancelled = false;
   private readonly isExplicitFixture: boolean;
+  private rankingAttemptCount = 0;
+  private rankingSuccessCount = 0;
+  private rankingErrorCount = 0;
+  private discoveryAttemptCount = 0;
+  private discoverySuccessCount = 0;
+  private discoveryErrorCount = 0;
 
   constructor(
     brief: InventoryBrief,
@@ -226,10 +232,31 @@ export class BoundedAgentController {
       // 9. Final state resolution
       this.run.completedAt = new Date().toISOString();
 
+      // If all ranking domains failed due to live errors, run state MUST be ERROR, never EMPTY
+      if (
+        this.rankingAttemptCount > 0 &&
+        this.rankingSuccessCount === 0 &&
+        this.rankingErrorCount > 0 &&
+        !this.isExplicitFixture
+      ) {
+        this.run.sourceMode = "ERROR";
+        this.transition(
+          "ERROR",
+          "All Qloo ranking domains failed due to upstream integration errors; cannot construct verified plans."
+        );
+        return this.run;
+      }
+
       if (this.run.plans.length === 0) {
+        // EMPTY is strictly reserved for successful integration that legitimately returns no usable candidates
         this.transition(
           "EMPTY",
           "No feasible merchandising rescue plans could be constructed within the specified budget and policy constraints."
+        );
+      } else if (this.run.sourceMode === "DEGRADED" || this.rankingErrorCount > 0) {
+        this.transition(
+          "DEGRADED",
+          `Generated ${this.run.plans.length} rescue experiment(s) with partial/degraded Qloo integration (${this.run.warnings.length} warning(s)).`
         );
       } else if (this.run.plans.length < 3) {
         this.transition(
@@ -317,10 +344,31 @@ export class BoundedAgentController {
         { allowFixture: this.isExplicitFixture }
       );
 
+      if (res.provenance.sourceMode === "CACHED_QLOO" && this.run.sourceMode === "LIVE_QLOO") {
+        this.run.sourceMode = "CACHED_QLOO";
+      }
+
       if (res.status === "error") {
         if (!this.isExplicitFixture) {
-          throw new Error(`Anchor resolution failed: ${res.error?.code || res.summary || "Unknown Qloo error"}`);
+          this.run.sourceMode = "ERROR";
+          throw new Error(`Anchor resolution failed for "${anchor.name}": ${res.error?.code || res.summary || "Unknown Qloo error"}`);
         }
+      }
+
+      if (res.status === "needs_input") {
+        results.push({
+          inputName: anchor.name,
+          qlooEntityId: "",
+          name: anchor.name,
+          entityType: anchor.expectedType || "brand",
+          confidenceState: "AMBIGUOUS",
+          provenanceId: res.provenance.requestId,
+        });
+        this.run.warnings.push(`Anchor "${anchor.name}" requires disambiguation: ${res.summary || "Ambiguous entity"}.`);
+        if (!this.isExplicitFixture) {
+          this.run.sourceMode = "DEGRADED";
+        }
+        continue;
       }
 
       // Check results
@@ -335,6 +383,13 @@ export class BoundedAgentController {
           provenanceId: res.provenance.requestId,
         });
         continue;
+      }
+
+      if (res.status === "degraded" || res.status === "partial") {
+        if (!this.isExplicitFixture) {
+          this.run.sourceMode = "DEGRADED";
+        }
+        this.run.warnings.push(`Anchor resolution for "${anchor.name}" completed with status "${res.status}".`);
       }
 
       const entityId = entityData.entity_id || entityData.entityId || `ent_${anchor.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
@@ -380,8 +435,24 @@ export class BoundedAgentController {
       { allowFixture: this.isExplicitFixture }
     );
 
+    if (res.provenance.sourceMode === "CACHED_QLOO" && this.run.sourceMode === "LIVE_QLOO") {
+      this.run.sourceMode = "CACHED_QLOO";
+    }
+
     if (res.status === "error" && !this.isExplicitFixture) {
       this.run.warnings.push(`Tag search failed: ${res.error?.code || res.summary}. Proceeding with entity signals only.`);
+      this.run.sourceMode = "DEGRADED";
+      return [];
+    }
+
+    if (res.status === "degraded" || res.status === "partial") {
+      if (!this.isExplicitFixture) this.run.sourceMode = "DEGRADED";
+      this.run.warnings.push(`Tag search completed with status "${res.status}": ${res.summary || "Partial tags"}`);
+    }
+
+    if (res.status === "needs_input") {
+      this.run.warnings.push(`Tag search requires input: ${res.summary}`);
+      if (!this.isExplicitFixture) this.run.sourceMode = "DEGRADED";
       return [];
     }
 
@@ -436,6 +507,8 @@ export class BoundedAgentController {
       if (!this.checkBudget()) break;
 
       this.run.qlooCallCount++;
+      this.discoveryAttemptCount++;
+
       const res = await this.qlooClient.callTool(
         "qloo_recommend",
         {
@@ -448,10 +521,32 @@ export class BoundedAgentController {
         { allowFixture: this.isExplicitFixture }
       );
 
+      if (res.provenance.sourceMode === "CACHED_QLOO" && this.run.sourceMode === "LIVE_QLOO") {
+        this.run.sourceMode = "CACHED_QLOO";
+      }
+
       if (res.status === "error") {
+        this.discoveryErrorCount++;
         if (!this.isExplicitFixture) {
           this.run.warnings.push(`Recommendation for ${targetType} failed: ${res.error?.code || res.summary}.`);
+          this.run.sourceMode = "DEGRADED";
         }
+        continue;
+      }
+
+      if (res.status === "degraded" || res.status === "partial") {
+        if (!this.isExplicitFixture) this.run.sourceMode = "DEGRADED";
+        this.run.warnings.push(`Recommendation for ${targetType} returned status "${res.status}".`);
+      }
+
+      if (res.status === "needs_input") {
+        if (!this.isExplicitFixture) this.run.sourceMode = "DEGRADED";
+        this.run.warnings.push(`Recommendation for ${targetType} requires input: ${res.summary}`);
+        continue;
+      }
+
+      if (res.status === "empty") {
+        this.run.warnings.push(`No recommendations returned for domain "${targetType}".`);
         continue;
       }
 
@@ -476,6 +571,7 @@ export class BoundedAgentController {
       candidatesByDomain[targetType] = domainCandidates;
 
       if (domainCandidates.length > 0) {
+        this.discoverySuccessCount++;
         this.addEvidence({
           evidenceClass: "QLOO_EVIDENCE",
           statement: `Qloo Cross-Domain Discovery (${targetType.toUpperCase()}): Discovered candidates: ${domainCandidates.map((c) => `'${c.name}'`).join(", ")}.`,
@@ -508,6 +604,8 @@ export class BoundedAgentController {
       }
 
       this.run.qlooCallCount++;
+      this.rankingAttemptCount++;
+
       const options = candidates.map((c) => c.name);
       const batchId = `batch_${domain}_${this.run.id.slice(0, 8)}`;
 
@@ -522,8 +620,13 @@ export class BoundedAgentController {
         { allowFixture: this.isExplicitFixture }
       );
 
+      if (res.provenance.sourceMode === "CACHED_QLOO" && this.run.sourceMode === "LIVE_QLOO") {
+        this.run.sourceMode = "CACHED_QLOO";
+      }
+
       // Handle every canonical status explicitly:
       if (res.status === "error") {
+        this.rankingErrorCount++;
         anyDomainRankFailed = true;
         this.run.warnings.push(`Ranking failed for domain "${domain}": ${res.error?.code || res.summary || "Upstream error"}`);
         if (!this.isExplicitFixture) {
@@ -582,6 +685,8 @@ export class BoundedAgentController {
       // Only if Qloo actually returned ranked candidates
       if (rankedList.length > 0) {
         anyDomainRankSucceeded = true;
+        this.rankingSuccessCount++;
+
         const rankDigest = computeRankDigest({
           domain,
           orderedInputOptions: options,
@@ -602,8 +707,9 @@ export class BoundedAgentController {
           sourceMode: res.provenance.sourceMode,
         });
 
-        // Bind batchId and deterministic rankDigest
+        // Bind batchId, domain, and deterministic rankDigest
         for (const ent of rankedList) {
+          (ent as any).domain = domain;
           (ent as any).batchId = batchId;
           (ent as any).rankDigest = rankDigest;
         }
@@ -666,6 +772,7 @@ export class BoundedAgentController {
         constraintChecks: [],
         scoreContext: hasRankDigest
           ? {
+              domain: topMovie ? "movie" : "brand",
               withinQueryRank: displayEntity.rank || 1,
               totalRankedInBatch: rankedEntities.movie?.length || rankedEntities.brand?.length || 1,
               batchRankCallId: (displayEntity as any).batchId,
@@ -698,6 +805,7 @@ export class BoundedAgentController {
         constraintChecks: [],
         scoreContext: hasRankDigest
           ? {
+              domain: "brand",
               withinQueryRank: bundleBrand.rank || 1,
               totalRankedInBatch: rankedEntities.brand?.length || 1,
               batchRankCallId: (bundleBrand as any).batchId,
@@ -730,6 +838,7 @@ export class BoundedAgentController {
         constraintChecks: [],
         scoreContext: hasRankDigest
           ? {
+              domain: "place",
               withinQueryRank: topPlace.rank || 1,
               totalRankedInBatch: rankedEntities.place?.length || 1,
               batchRankCallId: (topPlace as any).batchId,

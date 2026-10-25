@@ -8,10 +8,9 @@ describe("singleQueryRank invariant", () => {
     const plans: ActivationPlan[] = DEMO_AGENT_RUN.plans.map((p) => ({
       ...p,
       scoreContext: {
+        domain: "curated",
         batchRankCallId: "qloo-batch-req-001",
-        querySignalEntityIds: ["a24-ent-01", "bode-ent-02"],
-        affinityScore: 0.88,
-        rankInBatch: 1,
+        withinQueryRank: 1,
       },
     }));
 
@@ -21,35 +20,75 @@ describe("singleQueryRank invariant", () => {
     expect(result.error).toBeUndefined();
   });
 
-  it("fails invariant when plans reference distinct batch rank call IDs", () => {
-    const mixedPlans: ActivationPlan[] = [
+  it("passes when multiple domains correctly use different batch IDs (simultaneous movie, brand, and place plans)", () => {
+    const multiDomainPlans: ActivationPlan[] = [
       {
         ...DEMO_AGENT_RUN.plans[0],
+        mechanism: "DISPLAY",
         scoreContext: {
-          batchRankCallId: "batch-call-A",
-          querySignalEntityIds: ["a24-ent-01"],
-          affinityScore: 0.91,
-          rankInBatch: 1,
+          domain: "movie",
+          batchRankCallId: "batch_movie_001",
+          withinQueryRank: 1,
         },
       },
       {
         ...DEMO_AGENT_RUN.plans[1],
+        mechanism: "BUNDLE",
         scoreContext: {
-          batchRankCallId: "batch-call-B",
-          querySignalEntityIds: ["phoebe-ent-02"],
-          affinityScore: 0.84,
-          rankInBatch: 1,
+          domain: "brand",
+          batchRankCallId: "batch_brand_002",
+          withinQueryRank: 1,
+        },
+      },
+      {
+        ...DEMO_AGENT_RUN.plans[2],
+        mechanism: "LOCAL_ACTIVATION",
+        scoreContext: {
+          domain: "place",
+          batchRankCallId: "batch_place_003",
+          withinQueryRank: 1,
         },
       },
     ];
 
-    const result = validateSingleQueryRankingInvariant(mixedPlans);
-    expect(result.valid).toBe(false);
-    expect(result.batchIds.length).toBe(2);
-    expect(result.error).toContain("Cross-request comparison detected");
+    const result = validateSingleQueryRankingInvariant(multiDomainPlans);
+    expect(result.valid).toBe(true);
+    expect(result.batchIds).toHaveLength(3);
+    expect(result.batchIdsByDomain.movie).toEqual(["batch_movie_001"]);
+    expect(result.batchIdsByDomain.brand).toEqual(["batch_brand_002"]);
+    expect(result.batchIdsByDomain.place).toEqual(["batch_place_003"]);
+    expect(result.error).toBeUndefined();
   });
 
-  it("passes when plans omit scoreContext or share zero batch IDs", () => {
+  it("fails invariant when plans in the same entity domain reference distinct batch IDs", () => {
+    const mixedSameDomainPlans: ActivationPlan[] = [
+      {
+        ...DEMO_AGENT_RUN.plans[0],
+        mechanism: "DISPLAY",
+        scoreContext: {
+          domain: "movie",
+          batchRankCallId: "batch_movie_call_A",
+          withinQueryRank: 1,
+        },
+      },
+      {
+        ...DEMO_AGENT_RUN.plans[1],
+        mechanism: "DISPLAY",
+        scoreContext: {
+          domain: "movie",
+          batchRankCallId: "batch_movie_call_B",
+          withinQueryRank: 2,
+        },
+      },
+    ];
+
+    const result = validateSingleQueryRankingInvariant(mixedSameDomainPlans);
+    expect(result.valid).toBe(false);
+    expect(result.batchIds.length).toBe(2);
+    expect(result.error).toContain('Cross-request comparison detected within domain "movie"');
+  });
+
+  it("passes when plans omit scoreContext or share zero batch IDs (accepted when unranked/degraded)", () => {
     const plansWithoutScores: ActivationPlan[] = DEMO_AGENT_RUN.plans.map((p) => ({
       ...p,
       scoreContext: undefined,

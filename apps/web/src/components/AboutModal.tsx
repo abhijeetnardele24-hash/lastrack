@@ -100,7 +100,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               <Cpu size={16} /> 3. Single-Query Batch Ranking Invariant
             </h3>
             <p>
-              Under Qloo's mathematical ranking model, affinity scores across separate API requests do not share a common global scale. LastRack enforces a strict algorithmic invariant: <strong>all candidate options within a category are ranked in one unified batch call</strong> to preserve true score parity.
+              Under Qloo's mathematical ranking model, affinity scores across separate API requests do not share a common global scale. LastRack enforces a strict algorithmic invariant: <strong>one <code>qloo_rank</code> batch per comparable entity domain</strong> to preserve true score parity.
             </p>
           </div>
 

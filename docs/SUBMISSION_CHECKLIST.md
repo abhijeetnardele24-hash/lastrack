@@ -16,7 +16,7 @@ This checklist audits every mandatory requirement specified in `PROJECT_BLUEPRIN
 - [x] **Canonical Harness Execution:** Spawns local `@qloo/qloo-harness` distribution directly (`node dist/bin.js mcp`), version `0.1.26`.
 - [x] **MCP Handshake:** Completed `initialize` handshake (protocol `2024-11-05`), sent `notifications/initialized`, and verified contract checksum `sha256:762bdcc5e14ff797b6de739d2658a83f78af35e68d7a5a3449455be6046924f5`.
 - [x] **Exact Tool Schemas:** Adheres strictly to canonical schemas for `qloo_describe`, `qloo_find_tags`, `qloo_recommend`, and `qloo_rank` without inventing undocumented fields.
-- [x] **Single-Query Ranking Invariant:** Enforced in code (`singleQueryRank.ts`) and verified with unit tests. Cross-request score comparisons and mixed-domain rankings are strictly prohibited; ranked scores are bound via deterministic SHA-256 integrity digest (`rankDigest`).
+- [x] **Single-Query Ranking Invariant:** Enforced in code (`singleQueryRank.ts`) and verified with unit tests: "One `qloo_rank` batch per comparable entity domain." Cross-request score comparisons and same-domain multiple batches are strictly prohibited; ranked scores are bound via deterministic SHA-256 integrity digest (`rankDigest`).
 - [x] **Truthful Source Modes:** Transparent modes (`LIVE_QLOO`, `CACHED_QLOO`, `DEMO_FIXTURE`, `DEGRADED`, `ERROR`). Missing key starts in visibly labeled `DEMO_FIXTURE` mode with `DEMO_FIXTURE` evidence tags. Live errors transition to `ERROR` without silently swapping in synthetic fixtures.
 
 ---

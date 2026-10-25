@@ -115,9 +115,11 @@ export function buildServer(): FastifyInstance {
         return;
       }
 
-      // In production, reject unauthorized origins fail-closed
+      // In production, reject unauthorized origins fail-closed with controlled 403 Forbidden
       if (process.env.NODE_ENV === "production") {
-        cb(new Error("CORS origin not allowed"), false);
+        const corsErr: any = new Error("CORS origin not allowed: unauthorized origin");
+        corsErr.statusCode = 403;
+        cb(corsErr, false);
         return;
       }
 
@@ -126,7 +128,9 @@ export function buildServer(): FastifyInstance {
         return;
       }
 
-      cb(new Error("CORS origin not allowed"), false);
+      const corsErr: any = new Error("CORS origin not allowed: unauthorized origin");
+      corsErr.statusCode = 403;
+      cb(corsErr, false);
     },
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,

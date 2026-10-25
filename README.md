@@ -137,7 +137,7 @@ lastrack/
 [ GENERATING_CANDIDATES ] (Calls qloo_recommend for cross-domain entities in film, fashion, music, places)
    │
    ▼
-[ RANKING_CANDIDATES ] ── (Calls qloo_rank in ONE unified batch query — enforcing Single-Query Invariant)
+[ RANKING_CANDIDATES ] ── (Calls qloo_rank in one batch per entity domain — enforcing Single-Query Invariant)
    │
    ▼
 [ CONSTRAINT_CHECK ] ──── (Evaluates budget cap, maximum markdown, and merchant forbidden tactics)
@@ -154,7 +154,7 @@ lastrack/
 ## 🔬 Core AI Invariants & Safe-Use Standards
 
 ### 1. Single-Query Ranking Invariant
-Qloo affinity scores represent affinity *relative to the input signal and the candidate set*. Comparing raw scores across different batch calls or different timestamps is invalid. LastRack enforces in code (`packages/domain/src/singleQueryRank.ts`) that **all comparable candidate options MUST be evaluated in the exact same `qloo_rank` batch call**, bound by a SHA-256 `rankDigest` integrity checksum.
+Qloo affinity scores represent affinity *relative to the input signal and the candidate set within a specific domain*. Cross-domain scores are never directly compared. LastRack enforces in code (`packages/domain/src/singleQueryRank.ts`): **“One `qloo_rank` batch per comparable entity domain.”** Candidate plans within the same entity domain must share one batch ID and are bound by a deterministic SHA-256 `rankDigest` integrity checksum. Multiple batch IDs inside one domain fail the invariant.
 
 ### 2. Zero Demographic Profiling
 LastRack strictly prohibits targeting or reasoning based on race, ethnicity, religion, political party, health conditions, or sexual orientation.

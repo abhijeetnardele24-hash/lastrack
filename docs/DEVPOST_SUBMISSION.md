@@ -44,7 +44,7 @@ LastRack acts as an editorial merchandising strategist for independent fashion r
 
 - **Monorepo Architecture:** Cleanly decoupled into `@lastrack/contracts` (Zod schemas), `@lastrack/domain` (pure business logic, validators, ablation, receipts), `@lastrack/fixtures` (curated synthetic benchmark data), `apps/server` (Fastify API with static file serving and SSE streaming), and `apps/web` (React 18 + Vite frontend).
 - **Official MCP Process Spawning:** Spawns `@qloo/qloo-harness` via local executable path (`node dist/bin.js mcp`) communicating over standard input/output (`stdio`) with JSON-RPC 2.0 (protocol version `2024-11-05`).
-- **Single-Query Ranking Invariant:** Enforced architectural rule ensuring candidate options within a domain are ranked in one batch `qloo_rank` call with score comparability preserved and bound by a SHA-256 `rankDigest` integrity checksum.
+- **Single-Query Ranking Invariant:** Enforced architectural rule: "One `qloo_rank` batch per comparable entity domain" with score comparability preserved and bound by a SHA-256 `rankDigest` integrity checksum.
 - **Editorial Stockroom UI:** Custom Vanilla CSS design system pairing warm editorial paper tones (`#F2EFE7`), archive green (`#1F6B4F`), and terracotta accent (`#B94F32`) with accessible controls and micro-animations.
 - **Truthful Source Modes:** Transparent modes (`LIVE_QLOO`, `CACHED_QLOO`, `DEMO_FIXTURE`, `DEGRADED`, `ERROR`) ensuring zero silent fixture substitutions.
 - **Automated Verification:** 65 Vitest unit, integration, and contract tests, 26 Playwright E2E and Axe accessibility tests across Desktop Chromium and Mobile Chrome, secret scanning across working tree and Git history, and multi-stage containerization.
@@ -53,7 +53,7 @@ LastRack acts as an editorial merchandising strategist for independent fashion r
 
 ## Challenges We Overcame
 
-1. **Ensuring Mathematically Valid Ranking:** Qloo affinity scores reflect relative affinity against a specific query set. Comparing scores across separate API requests is statistically invalid. We solved this by designing the Single-Query Ranking Invariant: candidate options within a category are evaluated in one single batch query, with the ranked results bound via a deterministic SHA-256 integrity checksum.
+1. **Ensuring Mathematically Valid Ranking:** Qloo affinity scores reflect relative affinity against a specific query set and entity domain. Comparing scores across separate API requests or cross-domain scores directly is statistically invalid. We solved this by enforcing the Single-Query Ranking Invariant: “One `qloo_rank` batch per comparable entity domain.” Candidate options within the same entity domain are evaluated in one single batch query, with the ranked results bound via a deterministic SHA-256 integrity checksum.
 2. **Eliminating Silent Mock Fallbacks:** In complex agentic workflows, systems often silently substitute fixture data when live APIs fail. We re-engineered the controller to maintain strict source-mode truthfulness: unconfigured runs start in labeled `DEMO_FIXTURE` mode with `DEMO_FIXTURE` evidence tags, while live failures transition to `ERROR` rather than faking live data.
 3. **Designing for Independent Merchants:** Independent boutique staff do not have time for complex dashboards. We designed the interface to mimic a high-end editorial lookbook and inventory card, presenting three concrete, actionable bets that can be executed in under an hour.
 

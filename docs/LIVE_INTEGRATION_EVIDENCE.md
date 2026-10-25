@@ -23,7 +23,8 @@ this.process = spawn(process.execPath, [binPath, "mcp"], {
 ### Protocol Handshake & Capability Exchange
 1. **Request (`initialize`)**: LastRack sends `protocolVersion: "2024-11-05"` along with client capabilities (`tools`).
 2. **Notification (`notifications/initialized`)**: LastRack immediately confirms session activation per the official MCP specification.
-3. **Capability Validation (`qloo_capabilities`)**: LastRack validates that required operations exist and checks the canonical contract version.
+3. **Tool Listing (`tools/list`)**: LastRack calls and validates standard tool discovery, asserting availability of `qloo_describe`, `qloo_find_tags`, `qloo_recommend`, `qloo_rank`, and `qloo_capabilities`.
+4. **Capability Validation (`qloo_capabilities`)**: LastRack validates that required operations exist and checks the canonical contract version.
 
 - **MCP Protocol Version:** `2024-11-05`
 - **Contract Version:** `1.0.0`
@@ -82,10 +83,12 @@ Ranks candidate options of a single domain against anchor signals in a single ba
 
 Under Qloo's mathematical model, affinity scores across separate API requests do not share a common global scale. Attempting to rank mixed entity types or issuing sequential individual rank calls corrupts score comparability.
 
-LastRack enforces a strict algorithmic invariant:
-1. **Same-domain comparability:** Only entities belonging to the exact same Qloo domain (`movie`, `artist`, `brand`, or `place`) are ever passed into `qloo_rank`. Internal merchandising concepts are never submitted to `qloo_rank`.
-2. **Single-query execution:** All candidate entities for a domain are ranked in one unified batch call.
+LastRack enforces a strict algorithmic invariant: **“One `qloo_rank` batch per comparable entity domain.”**
+
+1. **Same-domain comparability:** Only entities belonging to the exact same Qloo domain (`movie`, `artist`, `brand`, or `place`) are ever passed into `qloo_rank`. Internal merchandising concepts are never submitted to `qloo_rank`. Cross-domain scores are never directly compared.
+2. **Batch execution per domain:** Plans in the same entity domain must share one batch ID. Multiple domains may use distinct batch IDs, but multiple batch IDs within a single domain fail the invariant.
 3. **Integrity digest binding:** The batch domain, input options, signals, and ranked score vector are hashed into a deterministic canonical integrity digest `rankDigest` (`sha256:...`) and embedded directly into the candidate plan's `scoreContext`. This serves as an integrity checksum and audit trail, not a cryptographic signature.
+4. **Degraded resilience:** Missing rank evidence is accepted only when clearly unranked or degraded.
 
 ---
 

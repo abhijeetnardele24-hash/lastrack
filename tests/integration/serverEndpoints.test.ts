@@ -310,14 +310,17 @@ describe("Fastify Server Integration Endpoints", () => {
   });
 
   describe("Server Hardening & CORS", () => {
-    it("rejects unauthorized cross-origin requests in production mode", async () => {
+    it("rejects unauthorized cross-origin requests with controlled 403 and no allow-origin header in production mode", async () => {
       const prevEnv = process.env.NODE_ENV;
+      const prevAllowed = process.env.ALLOWED_ORIGINS;
       process.env.NODE_ENV = "production";
+      process.env.ALLOWED_ORIGINS = "https://trusted.boutique.com";
       const prodServer = buildServer();
       await prodServer.ready();
 
       try {
-        const res = await prodServer.inject({
+        // 1. Arbitrary origin fails with controlled 403 and NO allow-origin header
+        const rejectedRes = await prodServer.inject({
           method: "OPTIONS",
           url: "/api/health",
           headers: {
@@ -326,11 +329,26 @@ describe("Fastify Server Integration Endpoints", () => {
           },
         });
 
-        // Fastify CORS throws an error when origin is rejected, resulting in 500 error or omission of Access-Control-Allow-Origin
-        expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+        expect(rejectedRes.statusCode).toBe(403);
+        expect(rejectedRes.statusCode).not.toBe(500);
+        expect(rejectedRes.headers["access-control-allow-origin"]).toBeUndefined();
+
+        // 2. Configured allowed production origin succeeds with 200/204 and allow-origin header
+        const allowedRes = await prodServer.inject({
+          method: "OPTIONS",
+          url: "/api/health",
+          headers: {
+            origin: "https://trusted.boutique.com",
+            "access-control-request-method": "GET",
+          },
+        });
+
+        expect(allowedRes.statusCode).toBeLessThan(400);
+        expect(allowedRes.headers["access-control-allow-origin"]).toBe("https://trusted.boutique.com");
       } finally {
         await prodServer.close();
         process.env.NODE_ENV = prevEnv;
+        process.env.ALLOWED_ORIGINS = prevAllowed;
       }
     });
   });

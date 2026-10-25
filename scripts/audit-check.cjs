@@ -63,7 +63,7 @@ try {
         severity: "high",
         advisory: "GHSA-mrhx-c7xc-m3w5",
         chain: "packages/contracts -> zod ^3.24.4",
-        detail: "ReDoS advisory in zod < 4.6.6. Upgrading to Zod 4 is breaking. Mitigated at server edge with Fastify 1MB body limit and explicit controller array/string bounds.",
+        detail: "Memory exhaustion advisory in zod < 4.6.6. Upgrading to Zod 4 is breaking. Request size limits (Fastify 1MB bodyLimit) and explicit input bounds reduce exposure but do not remove the vulnerable dependency.",
       },
     ],
   };
@@ -75,9 +75,9 @@ try {
   );
 
   console.log("\n🛡️ Upstream Vulnerability Chain & Mitigation Analysis:");
-  console.log("   - @qloo/qloo-harness -> @earendil-works/pi-coding-agent -> undici (High)");
-  console.log("   - @qloo/qloo-harness -> @earendil-works/pi-coding-agent -> brace-expansion (High)");
-  console.log("   - packages/contracts -> zod ^3.24.4 (High, ReDoS in <4.6.6; mitigated by 1MB bodyLimit)");
+  console.log("   - @qloo/qloo-harness -> @earendil-works/pi-coding-agent -> undici (High, Upstream vendor dependency)");
+  console.log("   - @qloo/qloo-harness -> @earendil-works/pi-coding-agent -> brace-expansion (High, Upstream vendor dependency)");
+  console.log("   - packages/contracts -> zod ^3.24.4 (High, Memory exhaustion in <4.6.6; request limits reduce exposure but do not remove vulnerable dependency)");
   console.log("\n⚠️ [Audit Gate] Gate status: WARN (NOT_CLEAN due to upstream dependencies).");
 
   if (critical > 0) {

@@ -1,7 +1,7 @@
 /**
- * LastRack Machine-Readable Verification Results Generator
+ * LastRack Authoritative Machine-Readable Verification Results Generator
  * Aggregates actual measured outputs from Git, Linters, Typecheckers, Vitest,
- * Playwright, Axe, Security Scans, and Dependency Audits into docs/verification-results.json.
+ * Playwright, Axe, Security Scans, Build, and Dependency Audits into docs/verification-results.json.
  */
 const fs = require("fs");
 const path = require("path");
@@ -20,6 +20,15 @@ function getCommitSha() {
   }
 }
 
+function getCommitTimestamp(sha) {
+  try {
+    const raw = execSync(`git log -1 --format=%ct ${sha}`, { cwd: ROOT, encoding: "utf-8" }).trim();
+    return parseInt(raw, 10) * 1000;
+  } catch {
+    return Date.now() - 3600000;
+  }
+}
+
 function getBranch() {
   try {
     return execSync("git rev-parse --abbrev-ref HEAD", { cwd: ROOT, encoding: "utf-8" }).trim();
@@ -33,10 +42,10 @@ function getHarnessVersion() {
     const pkgPath = path.join(ROOT, "node_modules/@qloo/qloo-harness/package.json");
     if (fs.existsSync(pkgPath)) {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-      return pkg.version || "0.1.26";
+      return pkg.version || "UNKNOWN";
     }
   } catch {}
-  return "0.1.26";
+  return "UNKNOWN";
 }
 
 function getDockerStatus() {
@@ -45,8 +54,17 @@ function getDockerStatus() {
 
 function getLiveIntegrationStatus() {
   const hasKey = Boolean(process.env.QLOO_API_KEY && process.env.QLOO_API_KEY.length > 10);
+  const liveSmokePath = path.join(TEST_RESULTS_DIR, "live-smoke.json");
+  if (fs.existsSync(liveSmokePath)) {
+    try {
+      const smoke = JSON.parse(fs.readFileSync(liveSmokePath, "utf-8"));
+      if (smoke.status === "PASSED" && smoke.sourceMode === "LIVE_QLOO") {
+        return "LIVE_QLOO_VERIFIED";
+      }
+    } catch {}
+  }
   if (hasKey) {
-    return "AUTHENTICATED_KEY_DETECTED";
+    return "KEY_PRESENT_NOT_LIVE_VERIFIED";
   }
   return "NOT_VERIFIED (No live QLOO_API_KEY configured in test session; verified via real child-process contract handshake and mock suite)";
 }
@@ -64,11 +82,61 @@ function generateResults() {
   console.log("⚙️ [Verification Generator] Parsing authoritative command and test outputs...");
 
   const timestamp = new Date().toISOString();
-  const commitSha = getCommitSha();
+  const currentHeadSha = getCommitSha();
   const branch = getBranch();
   const harnessVersion = getHarnessVersion();
 
-  // 1. Contract Test Output
+  // Allow explicit override via env, otherwise check previous file or fallback to current HEAD
+  let testedImplementationCommit = process.env.TESTED_COMMIT;
+  if (!testedImplementationCommit && fs.existsSync(OUTPUT_FILE)) {
+    try {
+      const prev = JSON.parse(fs.readFileSync(OUTPUT_FILE, "utf-8"));
+      if (prev.testedImplementationCommit && prev.testedImplementationCommit !== "UNKNOWN_COMMIT") {
+        testedImplementationCommit = prev.testedImplementationCommit;
+      } else if (prev.testedCommitSha) {
+        testedImplementationCommit = prev.testedCommitSha;
+      }
+    } catch {}
+  }
+  if (!testedImplementationCommit) {
+    testedImplementationCommit = currentHeadSha;
+  }
+  const evidenceCommit = process.env.EVIDENCE_COMMIT || currentHeadSha;
+
+  // 1. Lint Output
+  let lintSummary = { status: "NOT_RUN", errorCount: 0, warningCount: 0, filesChecked: 0 };
+  const lintResultsPath = path.join(TEST_RESULTS_DIR, "lint-results.json");
+  if (fs.existsSync(lintResultsPath)) {
+    try {
+      lintSummary = JSON.parse(fs.readFileSync(lintResultsPath, "utf-8"));
+    } catch (e) {
+      console.warn("Could not parse lint-results.json:", e.message);
+    }
+  }
+
+  // 2. Typecheck Output
+  let typecheckSummary = { status: "NOT_RUN", errorCount: 0, packagesChecked: [] };
+  const typecheckResultsPath = path.join(TEST_RESULTS_DIR, "typecheck-results.json");
+  if (fs.existsSync(typecheckResultsPath)) {
+    try {
+      typecheckSummary = JSON.parse(fs.readFileSync(typecheckResultsPath, "utf-8"));
+    } catch (e) {
+      console.warn("Could not parse typecheck-results.json:", e.message);
+    }
+  }
+
+  // 3. Build Output
+  let buildSummary = { status: "NOT_RUN", artifacts: [] };
+  const buildResultsPath = path.join(TEST_RESULTS_DIR, "build-results.json");
+  if (fs.existsSync(buildResultsPath)) {
+    try {
+      buildSummary = JSON.parse(fs.readFileSync(buildResultsPath, "utf-8"));
+    } catch (e) {
+      console.warn("Could not parse build-results.json:", e.message);
+    }
+  }
+
+  // 4. Contract Test Output
   let contractTest = { status: "NOT_RUN", details: "Run tests/contract/mcpChildProcess.test.ts" };
   const contractTestPath = path.join(TEST_RESULTS_DIR, "contract-test.json");
   if (fs.existsSync(contractTestPath)) {
@@ -79,7 +147,7 @@ function generateResults() {
     }
   }
 
-  // 2. Vitest Unit & Integration Test Output
+  // 5. Vitest Unit & Integration Test Output
   let vitestSummary = { testsTotal: 0, testsPassed: 0, testsFailed: 0, status: "NOT_RUN" };
   const vitestResultsPath = path.join(TEST_RESULTS_DIR, "vitest-results.json");
   if (fs.existsSync(vitestResultsPath)) {
@@ -97,7 +165,7 @@ function generateResults() {
     }
   }
 
-  // 3. Coverage Summary Output
+  // 6. Coverage Summary Output
   let coverageSummary = null;
   const coverageSummaryPath = path.join(ROOT, "coverage", "coverage-summary.json");
   if (fs.existsSync(coverageSummaryPath)) {
@@ -112,7 +180,7 @@ function generateResults() {
     } catch {}
   }
 
-  // 4. Playwright E2E Output
+  // 7. Playwright E2E Output
   let playwrightSummary = { testsTotal: 0, testsPassed: 0, testsFailed: 0, status: "NOT_RUN" };
   const playwrightResultsPath = path.join(TEST_RESULTS_DIR, "playwright-results.json");
   if (fs.existsSync(playwrightResultsPath)) {
@@ -150,7 +218,7 @@ function generateResults() {
     }
   }
 
-  // 5. Axe Accessibility Output
+  // 8. Axe Accessibility Output
   let axeSummary = { totalTestedStates: 0, totalViolations: 0, status: "NOT_RUN" };
   const axeResultsPath = path.join(TEST_RESULTS_DIR, "axe-results.json");
   if (fs.existsSync(axeResultsPath)) {
@@ -171,7 +239,7 @@ function generateResults() {
     } catch {}
   }
 
-  // 6. Security Scan Output
+  // 9. Security Scan Output
   let securitySummary = { status: "NOT_RUN", totalViolations: 0 };
   const secPath = path.join(TEST_RESULTS_DIR, "security-scan.json");
   if (fs.existsSync(secPath)) {
@@ -180,7 +248,7 @@ function generateResults() {
     } catch {}
   }
 
-  // 7. Dependency Audit Output
+  // 10. Dependency Audit Output
   let auditSummary = { status: "NOT_RUN", totalVulnerabilities: 0 };
   const auditPath = path.join(TEST_RESULTS_DIR, "npm-audit.json");
   if (fs.existsSync(auditPath)) {
@@ -189,15 +257,11 @@ function generateResults() {
     } catch {}
   }
 
-  // 8. Build Artifacts Check
-  const webDist = path.join(ROOT, "apps/web/dist/index.html");
-  const serverDist = path.join(ROOT, "apps/server/dist/server.js");
-  const buildStatus = fs.existsSync(webDist) && fs.existsSync(serverDist) ? "PASSED" : "NOT_BUILT";
-
   const results = {
     repository: "lastrack",
     generatedAt: timestamp,
-    testedCommitSha: commitSha,
+    testedImplementationCommit,
+    evidenceCommit,
     branch,
     canonicalQlooContract: {
       protocolVersion: "2024-11-05",
@@ -214,19 +278,25 @@ function generateResults() {
         "qloo_capabilities"
       ],
       mcpContractTest: contractTest,
+      rankingInvariant: "One qloo_rank batch per comparable entity domain",
       singleQueryRankingInvariantEnforced: true,
       integrityDigestType: "SHA-256",
     },
     qualityGates: {
       gate1_lint: {
         command: "npm run lint",
-        status: "PASSED",
-        details: "ESLint 9 flat config across all TS/TSX/JS files with zero errors and warnings",
+        status: lintSummary.status,
+        errorCount: lintSummary.errorCount,
+        warningCount: lintSummary.warningCount,
+        filesChecked: lintSummary.filesChecked,
+        details: lintSummary.details,
       },
       gate2_typecheck: {
         command: "npm run typecheck",
-        status: "PASSED",
-        details: "TypeScript 5.7 tsc -b across all workspace packages with zero errors",
+        status: typecheckSummary.status,
+        packagesChecked: typecheckSummary.packagesChecked,
+        errorCount: typecheckSummary.errorCount,
+        details: typecheckSummary.details,
       },
       gate3_unit_tests: {
         command: "npm test",
@@ -238,8 +308,8 @@ function generateResults() {
       },
       gate4_monorepo_build: {
         command: "npm run build",
-        status: buildStatus,
-        artifacts: [
+        status: buildSummary.status,
+        artifacts: buildSummary.artifacts?.map((a) => a.path) || [
           "apps/web/dist/index.html",
           "apps/server/dist/server.js"
         ],
@@ -300,7 +370,45 @@ if (process.argv.includes("--verify-only")) {
   }
   const data = JSON.parse(fs.readFileSync(OUTPUT_FILE, "utf-8"));
   
-  // Verify all essential gates passed (allowing Gate 8 to be WARN/NOT_CLEAN as documented)
+  const testedCommit = data.testedImplementationCommit || data.testedCommitSha;
+  const evidenceCommit = data.evidenceCommit || getCommitSha();
+  const commitTimestamp = getCommitTimestamp(testedCommit);
+
+  // 1. Verify required artifacts exist on disk and do not predate tested commit
+  const requiredArtifacts = [
+    "lint-results.json",
+    "typecheck-results.json",
+    "build-results.json",
+    "vitest-results.json",
+    "playwright-results.json",
+    "axe-results.json",
+    "security-scan.json",
+    "npm-audit.json",
+    "contract-test.json"
+  ];
+  for (const art of requiredArtifacts) {
+    const artPath = path.join(TEST_RESULTS_DIR, art);
+    if (!fs.existsSync(artPath)) {
+      console.error(`❌ Required verification artifact is missing: test-results/${art}`);
+      process.exit(1);
+    }
+    const stat = fs.statSync(artPath);
+    // Artifact must not predate tested commit (allowing 10 min window for test suite duration)
+    if (stat.mtimeMs < commitTimestamp - 600000) {
+      console.error(`❌ Artifact test-results/${art} predates tested commit ${testedCommit}! (Artifact: ${new Date(stat.mtimeMs).toISOString()}, Commit: ${new Date(commitTimestamp).toISOString()})`);
+      process.exit(1);
+    }
+  }
+
+  // 2. Verify build files exist on disk
+  const webDist = path.join(ROOT, "apps/web/dist/index.html");
+  const serverDist = path.join(ROOT, "apps/server/dist/server.js");
+  if (!fs.existsSync(webDist) || !fs.existsSync(serverDist)) {
+    console.error("❌ Build distribution files are missing on disk!");
+    process.exit(1);
+  }
+
+  // 3. Verify quality gates
   const g = data.qualityGates || {};
   if (
     g.gate1_lint?.status !== "PASSED" ||
@@ -315,19 +423,67 @@ if (process.argv.includes("--verify-only")) {
     process.exit(1);
   }
 
-  // Ensure harness package is accurate
-  if (!data.canonicalQlooContract?.harnessPackage?.includes("0.1.26")) {
-    console.error("❌ Invalid harness package version recorded!");
+  // 4. Verify test totals and ensure zero failed/skipped
+  if ((g.gate3_unit_tests?.testsFailed || 0) > 0 || (g.gate3_unit_tests?.testsTotal || 0) < 50) {
+    console.error("❌ Unit test totals inconsistent or failed tests detected!");
+    process.exit(1);
+  }
+  if ((g.gate5_playwright_e2e?.testsFailed || 0) > 0 || (g.gate5_playwright_e2e?.testsTotal || 0) < 20) {
+    console.error("❌ E2E test totals inconsistent or failed tests detected!");
+    process.exit(1);
+  }
+  if ((g.gate6_accessibility_axe?.totalViolations || 0) > 0) {
+    console.error("❌ Accessibility violations detected in Axe scans!");
     process.exit(1);
   }
 
-  // Ensure dependency audit is NOT falsely claimed as PASSED
+  // 5. Verify contract test status and checksum
+  if (data.canonicalQlooContract?.mcpContractTest?.status !== "PASSED") {
+    console.error("❌ MCP contract test evidence is missing or failed!");
+    process.exit(1);
+  }
+
+  // 6. Verify harness package version matches installed package
+  const installedHarnessVersion = getHarnessVersion();
+  if (
+    !data.canonicalQlooContract?.harnessPackage?.includes(installedHarnessVersion) ||
+    installedHarnessVersion === "UNKNOWN"
+  ) {
+    console.error(`❌ Harness package version mismatch! Installed: ${installedHarnessVersion}, Recorded: ${data.canonicalQlooContract?.harnessPackage}`);
+    process.exit(1);
+  }
+
+  // 7. Verify relationship between testedImplementationCommit and current evidenceCommit
+  if (testedCommit && evidenceCommit && testedCommit !== "UNKNOWN_COMMIT" && evidenceCommit !== "UNKNOWN_COMMIT") {
+    try {
+      execSync(`git merge-base --is-ancestor ${testedCommit} ${evidenceCommit}`, { cwd: ROOT, encoding: "utf-8" });
+      const revCount = parseInt(execSync(`git rev-list --count ${testedCommit}..${evidenceCommit}`, { cwd: ROOT, encoding: "utf-8" }).trim(), 10);
+      if (revCount > 1) {
+        console.error(`❌ Evidence commit (${evidenceCommit}) is more than 1 commit ahead of tested commit (${testedCommit})!`);
+        process.exit(1);
+      }
+    } catch (e) {
+      console.error(`❌ Tested SHA (${testedCommit}) is unrelated to or not an ancestor of evidence commit (${evidenceCommit}):`, e.message);
+      process.exit(1);
+    }
+  }
+
+  // 8. Ensure dependency audit is NOT falsely claimed as PASSED
   if (g.gate8_dependency_audit?.status === "PASSED" && g.gate8_dependency_audit?.totalVulnerabilities > 0) {
     console.error("❌ Gate 8 incorrectly claims PASSED with active vulnerabilities!");
     process.exit(1);
   }
 
-  console.log("✅ [Verification Validation] Authoritative verification file is valid, consistent, and passing.");
+  // 9. Ensure live execution is NOT claimed without real live evidence
+  if (
+    data.verificationBoundaries?.liveIntegrationStatus === "LIVE_QLOO_VERIFIED" &&
+    !fs.existsSync(path.join(TEST_RESULTS_DIR, "live-smoke.json"))
+  ) {
+    console.error("❌ Live execution claimed without live smoke evidence!");
+    process.exit(1);
+  }
+
+  console.log("✅ [Verification Validation] Authoritative verification file is valid, consistent, fresh, and passing.");
   process.exit(0);
 }
 
