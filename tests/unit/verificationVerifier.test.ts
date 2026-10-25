@@ -1,15 +1,34 @@
 import { describe, it, expect } from "vitest";
 // @ts-expect-error CommonJS module import in ESM/TS test
-import { verifyEvidence, CANONICAL_CHECKSUM, REQUIRED_TOOLS } from "../../scripts/generate-verification-results.cjs";
+import {
+  verifyEvidence,
+  validateLintArtifact,
+  validateTypecheckArtifact,
+  validateBuildArtifact,
+  validateVitestArtifact,
+  validateCoverageArtifact,
+  validatePlaywrightArtifact,
+  validateAxeArtifact,
+  validateSecurityScanArtifact,
+  validateAuditArtifact,
+  validateContractTestArtifact,
+  CANONICAL_CHECKSUM,
+  REQUIRED_TOOLS,
+  REQUIRED_BUILD_PATHS,
+} from "../../scripts/generate-verification-results.cjs";
 
 function createValidCommittedData(overrides = {}) {
   return {
     repository: "lastrack",
     generatedAt: new Date().toISOString(),
-    testedImplementationCommit: "a599df9aa6ef317303074734771189b4d1953b5f",
-    artifactGeneratedFromCommit: "a599df9aa6ef317303074734771189b4d1953b5f",
+    testedImplementationCommit: "2eb419191d7275472535a62de4e39bb9560b506d",
+    artifactGeneratedFromCommit: "2eb419191d7275472535a62de4e39bb9560b506d",
     carrierCommitVerifiedAtRuntime: "CALCULATED_AT_RUNTIME",
     branch: "main",
+    rawArtifactHashes: {
+      "test-results/lint-results.json": "sha256:mock_lint_hash",
+      "test-results/vitest-results.json": "sha256:mock_vitest_hash",
+    },
     canonicalQlooContract: {
       protocolVersion: "2024-11-05",
       contractVersion: "1.0.0",
@@ -20,6 +39,7 @@ function createValidCommittedData(overrides = {}) {
       supportedTools: [...REQUIRED_TOOLS],
       mcpContractTest: {
         status: "PASSED",
+        exitCode: 0,
         harnessVersion: "0.1.26",
         protocolVersion: "2024-11-05",
         canonicalChecksum: CANONICAL_CHECKSUM,
@@ -37,7 +57,7 @@ function createValidCommittedData(overrides = {}) {
         status: "PASSED",
         errorCount: 0,
         warningCount: 0,
-        filesChecked: 35,
+        filesChecked: 36,
         details: "ESLint clean",
       },
       gate2_typecheck: {
@@ -50,21 +70,21 @@ function createValidCommittedData(overrides = {}) {
       gate3_unit_tests: {
         command: "npm test",
         status: "PASSED",
-        testsTotal: 72,
-        testsPassed: 72,
+        testsTotal: 80,
+        testsPassed: 80,
         testsFailed: 0,
         testsSkipped: 0,
         coverage: {
           lines: 82.9,
           statements: 82.9,
           functions: 89.36,
-          branches: 71.66,
+          branches: 71.72,
         },
       },
       gate4_monorepo_build: {
         command: "npm run build",
         status: "PASSED",
-        artifacts: ["apps/web/dist/index.html", "apps/server/dist/server.js"],
+        artifacts: [...REQUIRED_BUILD_PATHS],
       },
       gate5_playwright_e2e: {
         command: "npm run test:e2e",
@@ -86,7 +106,7 @@ function createValidCommittedData(overrides = {}) {
       gate7_security_secrets: {
         command: "npm run security-scan",
         status: "PASSED",
-        scope: "Working tree and git history",
+        scope: "Working tree files AND complete reachable Git commit history",
         totalViolations: 0,
       },
       gate8_dependency_audit: {
@@ -113,30 +133,35 @@ function createValidCommittedData(overrides = {}) {
 
 function createMatchingReparsedArtifacts(overrides = {}) {
   return {
+    parsingErrors: [],
     rawArtifactTimestamps: {
       "test-results/lint-results.json": Date.now(),
       "test-results/vitest-results.json": Date.now(),
     },
     lint: {
       status: "PASSED",
+      exitCode: 0,
       errorCount: 0,
       warningCount: 0,
-      filesChecked: 35,
+      filesChecked: 36,
       details: "ESLint clean",
     },
     typecheck: {
       status: "PASSED",
+      exitCode: 0,
       errorCount: 0,
       packagesChecked: ["@lastrack/contracts", "@lastrack/domain", "@lastrack/fixtures", "@lastrack/server", "@lastrack/web"],
       details: "TypeScript clean",
     },
     build: {
       status: "PASSED",
-      artifacts: ["apps/web/dist/index.html", "apps/server/dist/server.js"],
+      exitCode: 0,
+      artifacts: [...REQUIRED_BUILD_PATHS],
       details: "Built clean",
     },
     contractTest: {
       status: "PASSED",
+      exitCode: 0,
       harnessVersion: "0.1.26",
       protocolVersion: "2024-11-05",
       canonicalChecksum: CANONICAL_CHECKSUM,
@@ -146,8 +171,8 @@ function createMatchingReparsedArtifacts(overrides = {}) {
     },
     vitest: {
       status: "PASSED",
-      testsTotal: 72,
-      testsPassed: 72,
+      testsTotal: 80,
+      testsPassed: 80,
       testsFailed: 0,
       testsSkipped: 0,
     },
@@ -155,7 +180,7 @@ function createMatchingReparsedArtifacts(overrides = {}) {
       lines: 82.9,
       statements: 82.9,
       functions: 89.36,
-      branches: 71.66,
+      branches: 71.72,
     },
     playwright: {
       status: "PASSED",
@@ -174,8 +199,9 @@ function createMatchingReparsedArtifacts(overrides = {}) {
     },
     securityScan: {
       status: "PASSED",
+      exitCode: 0,
       totalViolations: 0,
-      scope: "Working tree and git history",
+      scope: "Working tree files AND complete reachable Git commit history",
     },
     dependencyAudit: {
       status: "NOT_CLEAN",
@@ -196,170 +222,255 @@ function createMatchingReparsedArtifacts(overrides = {}) {
 }
 
 describe("Verification Results Comparative Verifier Regression Suite", () => {
-  it("accepts valid, exact-matching committed evidence and reparsed artifacts", () => {
-    const committed = createValidCommittedData();
-    const reparsed = createMatchingReparsedArtifacts();
-
-    const result = verifyEvidence(committed, reparsed, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
+  describe("1. Raw Artifact Schema Validation (Rejecting {} and incomplete JSON)", () => {
+    it("rejects {} build evidence", () => {
+      const res = validateBuildArtifact({});
+      expect(res.valid).toBe(false);
+      expect(res.errors.some((e: string) => e.includes("empty or not an object"))).toBe(true);
     });
 
-    expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
-  });
+    it("rejects build evidence with missing exit code, missing status, or empty artifact paths", () => {
+      const res1 = validateBuildArtifact({ artifacts: [] });
+      expect(res1.valid).toBe(false);
+      expect(res1.errors.some((e: string) => e.includes("status must be explicitly PASSED"))).toBe(true);
+      expect(res1.errors.some((e: string) => e.includes("missing zero numeric exitCode"))).toBe(true);
+      expect(res1.errors.some((e: string) => e.includes("missing non-empty artifacts array"))).toBe(true);
 
-  it("rejects changed coverage values", () => {
-    const committed = createValidCommittedData();
-    const reparsed = createMatchingReparsedArtifacts({
-      coverage: {
-        lines: 82.9,
-        statements: 82.9,
-        functions: 89.36,
-        branches: 75.0, // altered from 71.66
-      },
+      const res2 = validateBuildArtifact({ status: "PASSED", exitCode: 1, artifacts: [{ path: "apps/web/dist/index.html" }] });
+      expect(res2.valid).toBe(false);
+      expect(res2.errors.some((e: string) => e.includes("missing zero numeric exitCode"))).toBe(true);
+      expect(res2.errors.some((e: string) => e.includes("missing required distribution path: apps/server/dist/server.js"))).toBe(true);
     });
 
-    const result = verifyEvidence(committed, reparsed, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
+    it("rejects {} security scan evidence", () => {
+      const res = validateSecurityScanArtifact({});
+      expect(res.valid).toBe(false);
+      expect(res.errors.some((e: string) => e.includes("empty or not an object"))).toBe(true);
     });
 
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e: string) => e.includes("Coverage branches mismatch"))).toBe(true);
-  });
-
-  it("rejects stale test totals", () => {
-    const committed = createValidCommittedData();
-    const reparsed = createMatchingReparsedArtifacts({
-      vitest: {
+    it("never converts missing security totalViolations into zero", () => {
+      const res = validateSecurityScanArtifact({
         status: "PASSED",
-        testsTotal: 70, // altered from 72
-        testsPassed: 70,
-        testsFailed: 0,
-        testsSkipped: 0,
-      },
+        exitCode: 0,
+        scope: "test",
+        timestamp: new Date().toISOString(),
+      });
+      expect(res.valid).toBe(false);
+      expect(res.errors.some((e: string) => e.includes("totalViolations must be strictly numeric zero"))).toBe(true);
     });
 
-    const result = verifyEvidence(committed, reparsed, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
+    it("rejects {} and incomplete lint/typecheck artifacts", () => {
+      expect(validateLintArtifact({}).valid).toBe(false);
+      expect(validateTypecheckArtifact({}).valid).toBe(false);
+
+      const invalidLint = validateLintArtifact({ status: "PASSED", filesChecked: 0 });
+      expect(invalidLint.valid).toBe(false);
+      expect(invalidLint.errors.some((e: string) => e.includes("missing numeric exitCode"))).toBe(true);
+      expect(invalidLint.errors.some((e: string) => e.includes("missing positive numeric filesChecked"))).toBe(true);
+
+      const invalidTypecheck = validateTypecheckArtifact({ status: "PASSED", exitCode: 0, packagesChecked: [] });
+      expect(invalidTypecheck.valid).toBe(false);
+      expect(invalidTypecheck.errors.some((e: string) => e.includes("missing non-empty packagesChecked array"))).toBe(true);
     });
 
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e: string) => e.includes("Vitest testsTotal mismatch"))).toBe(true);
+    it("rejects {} vitest, coverage, playwright, axe, and contract artifacts", () => {
+      expect(validateVitestArtifact({}).valid).toBe(false);
+      expect(validateCoverageArtifact({}).valid).toBe(false);
+      expect(validatePlaywrightArtifact({}).valid).toBe(false);
+      expect(validateAxeArtifact({}).valid).toBe(false);
+      expect(validateAuditArtifact({}).valid).toBe(false);
+      expect(validateContractTestArtifact({}).valid).toBe(false);
+    });
   });
 
-  it("rejects missing or skipped tests in Vitest or Playwright", () => {
-    const committed = createValidCommittedData();
-    const reparsedWithSkippedVitest = createMatchingReparsedArtifacts({
-      vitest: {
-        status: "PASSED",
-        testsTotal: 72,
-        testsPassed: 71,
-        testsFailed: 0,
-        testsSkipped: 1, // unexpectedly skipped
-      },
+  describe("2. Comparative Verification & Hash Integrity Checks", () => {
+    it("accepts valid, exact-matching committed evidence and reparsed artifacts", () => {
+      const committed = createValidCommittedData({ rawArtifactHashes: {} });
+      const reparsed = createMatchingReparsedArtifacts();
+
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+
+      // No hash errors when hashes empty
+      expect(result.errors.filter((e: string) => !e.includes("rawArtifactHashes"))).toHaveLength(0);
     });
 
-    const result1 = verifyEvidence(committed, reparsedWithSkippedVitest, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
-    });
-    expect(result1.valid).toBe(false);
-    expect(result1.errors.some((e: string) => e.includes("Vitest contains unexpectedly skipped tests"))).toBe(true);
+    it("rejects changed coverage values without rounding or defaults", () => {
+      const committed = createValidCommittedData();
+      const reparsed = createMatchingReparsedArtifacts({
+        coverage: {
+          lines: 82.9,
+          statements: 82.9,
+          functions: 89.36,
+          branches: 71.66, // committed had 71.72
+        },
+      });
 
-    const reparsedWithSkippedPw = createMatchingReparsedArtifacts({
-      playwright: {
-        status: "PASSED",
-        testsTotal: 26,
-        testsPassed: 25,
-        testsFailed: 0,
-        testsSkipped: 1, // unexpectedly skipped
-        projects: ["Desktop Chromium", "Mobile Chrome"],
-      },
-    });
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
 
-    const result2 = verifyEvidence(committed, reparsedWithSkippedPw, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
-    });
-    expect(result2.valid).toBe(false);
-    expect(result2.errors.some((e: string) => e.includes("Playwright contains unexpectedly skipped tests"))).toBe(true);
-  });
-
-  it("rejects a false PASSED dependency audit when active vulnerabilities exist", () => {
-    const committed = createValidCommittedData();
-    // Falsely claims PASSED in committed JSON
-    committed.qualityGates.gate8_dependency_audit.status = "PASSED";
-
-    const reparsed = createMatchingReparsedArtifacts();
-
-    const result = verifyEvidence(committed, reparsed, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes("Coverage branches mismatch"))).toBe(true);
     });
 
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e: string) => e.includes("falsely claims PASSED while active vulnerabilities exist"))).toBe(true);
-  });
+    it("rejects stale test totals", () => {
+      const committed = createValidCommittedData();
+      const reparsed = createMatchingReparsedArtifacts({
+        vitest: {
+          status: "PASSED",
+          testsTotal: 79, // altered from 80
+          testsPassed: 79,
+          testsFailed: 0,
+          testsSkipped: 0,
+        },
+      });
 
-  it("rejects missing MCP tools from either contract artifact or supportedTools", () => {
-    const committed = createValidCommittedData();
-    const reparsed = createMatchingReparsedArtifacts({
-      contractTest: {
-        status: "PASSED",
-        harnessVersion: "0.1.26",
-        protocolVersion: "2024-11-05",
-        canonicalChecksum: CANONICAL_CHECKSUM,
-        adapterReady: true,
-        supportedOperations: ["describe", "find_tags", "recommend", "rank"],
-        toolsList: ["qloo_describe", "qloo_find_tags", "qloo_capabilities"], // missing qloo_rank and qloo_recommend
-      },
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes("Vitest testsTotal mismatch"))).toBe(true);
     });
 
-    const result = verifyEvidence(committed, reparsed, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
+    it("rejects missing or skipped tests in Vitest or Playwright", () => {
+      const committed = createValidCommittedData();
+      const reparsedWithSkippedVitest = createMatchingReparsedArtifacts({
+        vitest: {
+          status: "PASSED",
+          testsTotal: 80,
+          testsPassed: 79,
+          testsFailed: 0,
+          testsSkipped: 1, // unexpectedly skipped
+        },
+      });
+
+      const result1 = verifyEvidence(committed, reparsedWithSkippedVitest, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+      expect(result1.valid).toBe(false);
+      expect(result1.errors.some((e: string) => e.includes("Vitest contains unexpectedly skipped tests"))).toBe(true);
+
+      const reparsedWithSkippedPw = createMatchingReparsedArtifacts({
+        playwright: {
+          status: "PASSED",
+          testsTotal: 26,
+          testsPassed: 25,
+          testsFailed: 0,
+          testsSkipped: 1, // unexpectedly skipped
+          projects: ["Desktop Chromium", "Mobile Chrome"],
+        },
+      });
+
+      const result2 = verifyEvidence(committed, reparsedWithSkippedPw, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+      expect(result2.valid).toBe(false);
+      expect(result2.errors.some((e: string) => e.includes("Playwright contains unexpectedly skipped tests"))).toBe(true);
     });
 
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e: string) => e.includes("missing required tool: qloo_recommend"))).toBe(true);
-  });
+    it("rejects a false PASSED dependency audit when active vulnerabilities exist", () => {
+      const committed = createValidCommittedData();
+      committed.qualityGates.gate8_dependency_audit.status = "PASSED";
 
-  it("rejects an unrelated or overly distant carrier commit", () => {
-    const committed = createValidCommittedData({
-      testedImplementationCommit: "0000000000000000000000000000000000000000",
-    });
-    const reparsed = createMatchingReparsedArtifacts();
+      const reparsed = createMatchingReparsedArtifacts();
 
-    const result = verifyEvidence(committed, reparsed, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: "1111111111111111111111111111111111111111",
-    });
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
 
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e: string) => e.includes("unrelated") || e.includes("fatal") || e.includes("more than 1 commit ahead"))).toBe(true);
-  });
-
-  it("rejects claimed live Qloo execution without a successful live-smoke artifact", () => {
-    const committed = createValidCommittedData();
-    committed.verificationBoundaries.liveIntegrationStatus = "LIVE_QLOO_VERIFIED"; // falsely claims live Qloo verified
-
-    const reparsed = createMatchingReparsedArtifacts({
-      liveSmoke: {
-        exists: false, // no smoke file
-        passed: false,
-        details: null,
-      },
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes("falsely claims PASSED while active vulnerabilities exist"))).toBe(true);
     });
 
-    const result = verifyEvidence(committed, reparsed, {
-      installedHarnessVersion: "0.1.26",
-      carrierHead: committed.testedImplementationCommit,
+    it("rejects missing MCP tools from either contract artifact or supportedTools", () => {
+      const committed = createValidCommittedData();
+      const reparsed = createMatchingReparsedArtifacts({
+        contractTest: {
+          status: "PASSED",
+          exitCode: 0,
+          harnessVersion: "0.1.26",
+          protocolVersion: "2024-11-05",
+          canonicalChecksum: CANONICAL_CHECKSUM,
+          adapterReady: true,
+          supportedOperations: ["describe", "find_tags", "recommend", "rank"],
+          toolsList: ["qloo_describe", "qloo_find_tags", "qloo_capabilities"],
+        },
+      });
+
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes("missing required tool: qloo_recommend"))).toBe(true);
     });
 
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e: string) => e.includes("Claimed live Qloo execution without a successful live-smoke artifact"))).toBe(true);
+    it("rejects mismatch between committed and reparsed build paths", () => {
+      const committed = createValidCommittedData();
+      const reparsed = createMatchingReparsedArtifacts({
+        build: {
+          status: "PASSED",
+          exitCode: 0,
+          artifacts: ["apps/web/dist/index.html"], // missing apps/server/dist/server.js
+          details: "Partial",
+        },
+      });
+
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes("Build artifact paths mismatch"))).toBe(true);
+    });
+
+    it("rejects an altered raw artifact after evidence generation (hash mismatch)", () => {
+      const committed = createValidCommittedData({
+        rawArtifactHashes: {
+          "package.json": "sha256:intentionally_corrupted_hash_to_trigger_tamper_detection",
+        },
+      });
+      const reparsed = createMatchingReparsedArtifacts();
+
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes("Raw artifact hash mismatch"))).toBe(true);
+    });
+
+    it("rejects claimed live Qloo execution without a successful live-smoke artifact", () => {
+      const committed = createValidCommittedData();
+      committed.verificationBoundaries.liveIntegrationStatus = "LIVE_QLOO_VERIFIED";
+
+      const reparsed = createMatchingReparsedArtifacts({
+        liveSmoke: {
+          exists: false,
+          passed: false,
+          details: null,
+        },
+      });
+
+      const result = verifyEvidence(committed, reparsed, {
+        installedHarnessVersion: "0.1.26",
+        carrierHead: committed.testedImplementationCommit,
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes("Claimed live Qloo execution without a successful live-smoke artifact"))).toBe(true);
+    });
   });
 });

@@ -45,6 +45,7 @@ const status = errorCount === 0 ? "PASSED" : "FAILED";
 const result = {
   timestamp: new Date().toISOString(),
   status,
+  exitCode: errorCount === 0 ? 0 : 1,
   packagesChecked: packages,
   errorCount,
   errors: errors.length > 0 ? errors : undefined,

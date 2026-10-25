@@ -51,11 +51,17 @@ jobs:
       - name: Gate 7 — Production dependency audit & mitigation review
         run: npm run audit
 
-      - name: Gate 8 — Generate authoritative verification evidence from CI run
-        run: node scripts/generate-verification-results.cjs
-
-      - name: Gate 9 — Validate authoritative verification evidence
+      - name: Gate 8 — Verify committed verification evidence (prevent circular overwrite)
         run: node scripts/generate-verification-results.cjs --verify-only
+
+      - name: Gate 9 — Assert committed verification evidence remains untampered
+        run: git diff --exit-code -- docs/verification-results.json
+
+      - name: Gate 10 — Generate independent CI verification results
+        run: node scripts/generate-verification-results.cjs --output test-results/ci-verification-results.json
+
+      - name: Gate 11 — Validate independent CI verification results
+        run: node scripts/generate-verification-results.cjs --verify-only --evidence-file test-results/ci-verification-results.json
 
       - name: Upload Verification Evidence & Test Artifacts
         uses: actions/upload-artifact@v4

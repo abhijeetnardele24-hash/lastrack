@@ -53,10 +53,12 @@ if (serverExists) {
 }
 
 const status = !buildFailed && webExists && serverExists ? "PASSED" : "FAILED";
+const exitCode = status === "PASSED" ? 0 : 1;
 
 const result = {
   timestamp: new Date().toISOString(),
   status,
+  exitCode,
   artifacts,
   details: status === "PASSED" ? "All web and server production artifacts built successfully" : buildError || "Missing dist artifacts"
 };

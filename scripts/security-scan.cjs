@@ -106,6 +106,8 @@ if (!fs.existsSync(testResultsDir)) {
 const scanSummary = {
   timestamp: new Date().toISOString(),
   status: allViolations.length === 0 ? "PASSED" : "FAILED",
+  exitCode: allViolations.length === 0 ? 0 : 1,
+  scope: "Working tree files AND complete reachable Git commit history",
   workingTreeViolations: workingTreeViolations.length,
   gitHistoryViolations: gitHistoryViolations.length,
   totalViolations: allViolations.length,

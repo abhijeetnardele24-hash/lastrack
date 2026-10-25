@@ -56,6 +56,7 @@ describe("Real MCP Child-Process Contract Handshake Suite", () => {
         {
           timestamp: new Date().toISOString(),
           status: "PASSED",
+          exitCode: 0,
           harnessVersion: getInstalledHarnessVersion(),
           protocolVersion: EXPECTED_PROTOCOL_VERSION,
           canonicalChecksum: EXPECTED_CANONICAL_CHECKSUM,

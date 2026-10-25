@@ -48,6 +48,7 @@ const status = exitCode === 0 && errorCount === 0 ? "PASSED" : "FAILED";
 const result = {
   timestamp: new Date().toISOString(),
   status,
+  exitCode,
   errorCount,
   warningCount,
   filesChecked,
