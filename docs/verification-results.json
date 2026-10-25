@@ -1,7 +1,8 @@
 {
   "repository": "lastrack",
-  "generatedAt": "2026-10-25T09:02:15.100Z",
-  "testedCommitSha": "60389f6cdb7e215fe706598cd5d7871c6664aa10",
+  "generatedAt": "2026-10-25T10:48:26.361Z",
+  "testedImplementationCommit": "a599df9aa6ef317303074734771189b4d1953b5f",
+  "evidenceCommit": "a599df9aa6ef317303074734771189b4d1953b5f",
   "branch": "main",
   "canonicalQlooContract": {
     "protocolVersion": "2024-11-05",
@@ -23,7 +24,7 @@
       "qloo_capabilities"
     ],
     "mcpContractTest": {
-      "timestamp": "2026-10-25T09:01:34.814Z",
+      "timestamp": "2026-10-25T10:45:20.958Z",
       "status": "PASSED",
       "harnessVersion": "0.1.26",
       "protocolVersion": "2024-11-05",
@@ -39,8 +40,21 @@
         "audience_demographics",
         "trends",
         "find_tags"
+      ],
+      "toolsList": [
+        "qloo_capabilities",
+        "qloo_recommend",
+        "qloo_rank",
+        "qloo_describe",
+        "qloo_where_popular",
+        "qloo_compare_audiences",
+        "qloo_entity_tags",
+        "qloo_audience_demographics",
+        "qloo_trends",
+        "qloo_find_tags"
       ]
     },
+    "rankingInvariant": "One qloo_rank batch per comparable entity domain",
     "singleQueryRankingInvariantEnforced": true,
     "integrityDigestType": "SHA-256"
   },
@@ -48,24 +62,35 @@
     "gate1_lint": {
       "command": "npm run lint",
       "status": "PASSED",
-      "details": "ESLint 9 flat config across all TS/TSX/JS files with zero errors and warnings"
+      "errorCount": 0,
+      "warningCount": 0,
+      "filesChecked": 35,
+      "details": "ESLint flat config clean across all files"
     },
     "gate2_typecheck": {
       "command": "npm run typecheck",
       "status": "PASSED",
-      "details": "TypeScript 5.7 tsc -b across all workspace packages with zero errors"
+      "packagesChecked": [
+        "@lastrack/contracts",
+        "@lastrack/domain",
+        "@lastrack/fixtures",
+        "@lastrack/server",
+        "@lastrack/web"
+      ],
+      "errorCount": 0,
+      "details": "TypeScript 5.7 tsc -b clean across all workspaces"
     },
     "gate3_unit_tests": {
       "command": "npm test",
       "status": "PASSED",
-      "testsTotal": 65,
-      "testsPassed": 65,
+      "testsTotal": 72,
+      "testsPassed": 72,
       "testsFailed": 0,
       "coverage": {
-        "lines": 83.34,
-        "statements": 83.34,
-        "functions": 89.13,
-        "branches": 70.28
+        "lines": 82.9,
+        "statements": 82.9,
+        "functions": 89.36,
+        "branches": 71.72
       }
     },
     "gate4_monorepo_build": {
@@ -133,7 +158,7 @@
           "severity": "high",
           "advisory": "GHSA-mrhx-c7xc-m3w5",
           "chain": "packages/contracts -> zod ^3.24.4",
-          "detail": "ReDoS advisory in zod < 4.6.6. Upgrading to Zod 4 is breaking. Mitigated at server edge with Fastify 1MB body limit and explicit controller array/string bounds."
+          "detail": "Memory exhaustion advisory in zod < 4.6.6. Upgrading to Zod 4 is breaking. Request size limits (Fastify 1MB bodyLimit) and explicit input bounds reduce exposure but do not remove the vulnerable dependency."
         }
       ]
     }

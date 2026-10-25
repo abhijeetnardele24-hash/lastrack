@@ -86,21 +86,7 @@ function generateResults() {
   const branch = getBranch();
   const harnessVersion = getHarnessVersion();
 
-  // Allow explicit override via env, otherwise check previous file or fallback to current HEAD
-  let testedImplementationCommit = process.env.TESTED_COMMIT;
-  if (!testedImplementationCommit && fs.existsSync(OUTPUT_FILE)) {
-    try {
-      const prev = JSON.parse(fs.readFileSync(OUTPUT_FILE, "utf-8"));
-      if (prev.testedImplementationCommit && prev.testedImplementationCommit !== "UNKNOWN_COMMIT") {
-        testedImplementationCommit = prev.testedImplementationCommit;
-      } else if (prev.testedCommitSha) {
-        testedImplementationCommit = prev.testedCommitSha;
-      }
-    } catch {}
-  }
-  if (!testedImplementationCommit) {
-    testedImplementationCommit = currentHeadSha;
-  }
+  const testedImplementationCommit = process.env.TESTED_COMMIT || currentHeadSha;
   const evidenceCommit = process.env.EVIDENCE_COMMIT || currentHeadSha;
 
   // 1. Lint Output
@@ -453,18 +439,21 @@ if (process.argv.includes("--verify-only")) {
     process.exit(1);
   }
 
-  // 7. Verify relationship between testedImplementationCommit and current evidenceCommit
-  if (testedCommit && evidenceCommit && testedCommit !== "UNKNOWN_COMMIT" && evidenceCommit !== "UNKNOWN_COMMIT") {
-    try {
-      execSync(`git merge-base --is-ancestor ${testedCommit} ${evidenceCommit}`, { cwd: ROOT, encoding: "utf-8" });
-      const revCount = parseInt(execSync(`git rev-list --count ${testedCommit}..${evidenceCommit}`, { cwd: ROOT, encoding: "utf-8" }).trim(), 10);
-      if (revCount > 1) {
-        console.error(`❌ Evidence commit (${evidenceCommit}) is more than 1 commit ahead of tested commit (${testedCommit})!`);
+  // 7. Verify relationship between testedImplementationCommit and current evidenceCommit / current HEAD
+  if (testedCommit && testedCommit !== "UNKNOWN_COMMIT") {
+    const commitsToCheck = new Set([evidenceCommit, getCommitSha()].filter(c => c && c !== "UNKNOWN_COMMIT"));
+    for (const commitToCheck of commitsToCheck) {
+      try {
+        execSync(`git merge-base --is-ancestor ${testedCommit} ${commitToCheck}`, { cwd: ROOT, encoding: "utf-8" });
+        const revCount = parseInt(execSync(`git rev-list --count ${testedCommit}..${commitToCheck}`, { cwd: ROOT, encoding: "utf-8" }).trim(), 10);
+        if (revCount > 1) {
+          console.error(`❌ Commit (${commitToCheck}) is more than 1 commit ahead of tested commit (${testedCommit})!`);
+          process.exit(1);
+        }
+      } catch (e) {
+        console.error(`❌ Tested SHA (${testedCommit}) is unrelated to or not an ancestor of commit (${commitToCheck}):`, e.message);
         process.exit(1);
       }
-    } catch (e) {
-      console.error(`❌ Tested SHA (${testedCommit}) is unrelated to or not an ancestor of evidence commit (${evidenceCommit}):`, e.message);
-      process.exit(1);
     }
   }
 
