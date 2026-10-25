@@ -10,10 +10,10 @@
 ### Tagline
 Before discounting slow inventory, LastRack uses Qloo cultural intelligence to design small, evidence-linked merchandising experiments—and shows exactly what becomes generic when Qloo is removed.
 
-### Links & Video Placeholders
+### Links & Video
 - **GitHub Repository:** [https://github.com/abhijeetnardele24-hash/lastrack](https://github.com/abhijeetnardele24-hash/lastrack)
 - **Live Demo URL:** [https://abhijeetnardele24-hash.github.io/lastrack/](https://abhijeetnardele24-hash.github.io/lastrack/) — public `DEMO_FIXTURE` judge build; no private key required
-- **Unlisted YouTube Video URL:** `[UNLISTED_YOUTUBE_VIDEO_URL_PLACEHOLDER — Video duration: ~2:30, 1080p, Unlisted]`
+- **Unlisted YouTube Video URL:** [https://youtu.be/IR_Zenyjizs](https://youtu.be/IR_Zenyjizs) — 2:26, 1080p, Unlisted
 
 ### Submission Asset Paths
 - **Thumbnail Image (1280×720):** `docs/assets/thumbnail.png`
@@ -154,9 +154,9 @@ We discovered that cultural taste graphs operate like an intuitive merchandiser'
 - [x] GitHub Actions workflow has completed successfully.
 - [x] Public judge demo deployed at [https://abhijeetnardele24-hash.github.io/lastrack/](https://abhijeetnardele24-hash.github.io/lastrack/).
 - [x] Video rendered following `docs/VIDEO_HANDOFF.md` (2:25, 1080p, 30 fps, normalized audio, captions).
-- [ ] Video uploaded to YouTube with visibility set to **UNLISTED**.
-- [ ] YouTube URL pasted into the Devpost submission form.
-- [ ] Devpost form fields filled using the copy-ready sections above.
-- [ ] `docs/assets/thumbnail.png` uploaded as project thumbnail.
-- [ ] Screenshots 1 through 5 uploaded to Devpost media gallery.
-- [ ] Final submission submitted before the hackathon deadline.
+- [x] Video uploaded to YouTube with visibility set to **UNLISTED**.
+- [x] YouTube URL pasted into the Devpost submission form.
+- [x] Devpost form fields filled using the copy-ready sections above.
+- [x] `docs/assets/thumbnail.png` uploaded as project thumbnail.
+- [x] Screenshots 1 through 5 uploaded to Devpost media gallery.
+- [x] Final submission published at [https://devpost.com/software/lastrack](https://devpost.com/software/lastrack) before the hackathon deadline.
