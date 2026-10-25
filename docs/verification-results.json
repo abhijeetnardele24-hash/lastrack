@@ -1,10 +1,22 @@
 {
   "repository": "lastrack",
-  "generatedAt": "2026-10-25T11:10:15.100Z",
-  "testedImplementationCommit": "2eb419191d7275472535a62de4e39bb9560b506d",
-  "artifactGeneratedFromCommit": "2eb419191d7275472535a62de4e39bb9560b506d",
+  "generatedAt": "2026-10-25T11:27:45.986Z",
+  "testedImplementationCommit": "a2d9798a3d48c1eb7392153177828d5d6538cf5f",
+  "artifactGeneratedFromCommit": "a2d9798a3d48c1eb7392153177828d5d6538cf5f",
   "carrierCommitVerifiedAtRuntime": "CALCULATED_AT_RUNTIME",
   "branch": "main",
+  "rawArtifactHashes": {
+    "test-results/lint-results.json": "sha256:9514d0cb3bd51353c29862480b4e42c314a10b538033e841f77f134564a108bf",
+    "test-results/typecheck-results.json": "sha256:82177c120423f200a440749bc7869e16c04f7c7364aab84dc08c18f92de729f9",
+    "test-results/build-results.json": "sha256:9cb16eb07eeb60598d3aa0601dab5393f7c6de00f88970239aa1a217630d996b",
+    "test-results/contract-test.json": "sha256:f72ccd9dae894a7953137a9ba712afdf3b9f66e421c5a28550838eddb9194420",
+    "test-results/vitest-results.json": "sha256:198d3c765f78ec2e931ff6989f0232252dd75f6035c17cdcb77a4feabf068cc1",
+    "coverage/coverage-summary.json": "sha256:e3d38bf49cc0f2402929830266e02f3c3082f32827c85700f8c9d711bd80cae2",
+    "test-results/playwright-results.json": "sha256:767faa6ebc471cf28b12fed4e434496b25ba731f45fed5f6d9d574a9ffc976b8",
+    "test-results/axe-results.json": "sha256:eb584f5a1205373cc25ef485c67bb62d1aab13d5d2e48d22b2d6b712c8673b51",
+    "test-results/security-scan.json": "sha256:b304e9248420cbf39b71c292b885af47591612d99e19117acda36d9733b1c6fd",
+    "test-results/npm-audit.json": "sha256:fac0d62bbad877ab614c8c5df1e2390da53ac31b5a68f8ab3f21a5c98b88611f"
+  },
   "canonicalQlooContract": {
     "protocolVersion": "2024-11-05",
     "contractVersion": "1.0.0",
@@ -26,6 +38,7 @@
     ],
     "mcpContractTest": {
       "status": "PASSED",
+      "exitCode": 0,
       "harnessVersion": "0.1.26",
       "protocolVersion": "2024-11-05",
       "canonicalChecksum": "sha256:762bdcc5e14ff797b6de739d2658a83f78af35e68d7a5a3449455be6046924f5",
@@ -83,8 +96,8 @@
     "gate3_unit_tests": {
       "command": "npm test",
       "status": "PASSED",
-      "testsTotal": 80,
-      "testsPassed": 80,
+      "testsTotal": 87,
+      "testsPassed": 87,
       "testsFailed": 0,
       "testsSkipped": 0,
       "coverage": {
