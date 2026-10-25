@@ -85,7 +85,7 @@ Under Qloo's mathematical model, affinity scores across separate API requests do
 LastRack enforces a strict algorithmic invariant:
 1. **Same-domain comparability:** Only entities belonging to the exact same Qloo domain (`movie`, `artist`, `brand`, or `place`) are ever passed into `qloo_rank`. Internal merchandising concepts are never submitted to `qloo_rank`.
 2. **Single-query execution:** All candidate entities for a domain are ranked in one unified batch call.
-3. **Cryptographic binding:** The batch options, signals, and ranked score vector are hashed into a deterministic `rankDigest` (`sha256:...`) and embedded directly into the candidate plan's `scoreContext`.
+3. **Integrity digest binding:** The batch domain, input options, signals, and ranked score vector are hashed into a deterministic canonical integrity digest `rankDigest` (`sha256:...`) and embedded directly into the candidate plan's `scoreContext`. This serves as an integrity checksum and audit trail, not a cryptographic signature.
 
 ---
 

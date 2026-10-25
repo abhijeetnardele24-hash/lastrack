@@ -2,10 +2,28 @@ import { spawn, ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { fileURLToPath } from "url";
 import path from "path";
+import fs from "fs";
 import { SourceMode } from "@lastrack/contracts";
+
+export const EXPECTED_CANONICAL_CHECKSUM = "sha256:762bdcc5e14ff797b6de739d2658a83f78af35e68d7a5a3449455be6046924f5";
+export const EXPECTED_PROTOCOL_VERSION = "2024-11-05";
+export const REQUIRED_OPERATIONS = ["describe", "find_tags", "recommend", "rank"] as const;
+
+export function getInstalledHarnessVersion(): string {
+  try {
+    const pkgUrl = import.meta.resolve("@qloo/qloo-harness/package.json");
+    const pkgPath = fileURLToPath(pkgUrl);
+    const content = fs.readFileSync(pkgPath, "utf-8");
+    const parsed = JSON.parse(content);
+    return parsed.version || "0.1.26";
+  } catch {
+    return "0.1.26";
+  }
+}
 
 export interface CanonicalQlooError {
   code: string;
+  message?: string;
   layer?: string;
   retryable: boolean;
   recovery?: string;
@@ -156,13 +174,17 @@ export class QlooMcpClient {
 
         // 1. Send initialize request
         const initResponse = await this.callJsonRpc("initialize", {
-          protocolVersion: "2024-11-05",
+          protocolVersion: EXPECTED_PROTOCOL_VERSION,
           capabilities: {},
           clientInfo: { name: "LastRack", version: "1.0.0" },
         }, 6000);
 
         if (!initResponse || !initResponse.protocolVersion) {
           throw new Error("Invalid MCP initialize handshake response from harness.");
+        }
+
+        if (initResponse.protocolVersion !== EXPECTED_PROTOCOL_VERSION) {
+          throw new Error(`MCP protocol version mismatch: expected ${EXPECTED_PROTOCOL_VERSION}, received ${initResponse.protocolVersion}`);
         }
 
         // 2. Send notifications/initialized
@@ -175,21 +197,42 @@ export class QlooMcpClient {
         }, 6000);
 
         const capData = capResult?.structuredContent || this.extractStructuredContent(capResult);
-        if (capData) {
-          this.capabilities = {
-            contractVersion: capData.contract_version || "1.0.0",
-            contractChecksum: capData.contract_checksum || "",
-            ready: Boolean(capData.adapter?.ready),
-            supportedOperations: capData.adapter?.supported_operation_ids || [],
-          };
+        if (!capData) {
+          throw new Error("Missing structuredContent in qloo_capabilities response.");
         }
+
+        if (capData.contract_checksum !== EXPECTED_CANONICAL_CHECKSUM) {
+          throw new Error(`Canonical contract checksum mismatch: expected ${EXPECTED_CANONICAL_CHECKSUM}, received ${capData.contract_checksum}`);
+        }
+
+        if (!capData.adapter?.ready) {
+          throw new Error("MCP adapter reported ready: false.");
+        }
+
+        const supportedOps = capData.adapter?.supported_operation_ids || [];
+        for (const op of REQUIRED_OPERATIONS) {
+          if (!supportedOps.includes(op)) {
+            throw new Error(`Required canonical operation "${op}" is missing from supported_operation_ids: [${supportedOps.join(", ")}].`);
+          }
+        }
+
+        this.capabilities = {
+          contractVersion: capData.contract_version || "1.0.0",
+          contractChecksum: capData.contract_checksum,
+          ready: true,
+          supportedOperations: supportedOps,
+        };
 
         this.mcpReady = true;
         return true;
       } catch (err: any) {
         this.mcpReady = false;
         if (this.childProcess) {
-          this.childProcess.kill();
+          try {
+            this.childProcess.kill("SIGTERM");
+          } catch {
+            // child process already exited
+          }
           this.childProcess = null;
         }
         throw new Error(`MCP Initialization failed: ${err.message}`);
@@ -199,6 +242,23 @@ export class QlooMcpClient {
     })();
 
     return this.initPromise;
+  }
+
+  public async shutdown(): Promise<void> {
+    this.mcpReady = false;
+    if (this.childProcess) {
+      try {
+        this.childProcess.kill("SIGTERM");
+      } catch {
+        // process already exited
+      }
+      this.childProcess = null;
+    }
+    for (const [id, req] of this.pendingRequests.entries()) {
+      clearTimeout(req.timer);
+      req.reject(new Error("MCP client was shut down"));
+      this.pendingRequests.delete(id);
+    }
   }
 
   public async callTool<T = any>(
@@ -573,13 +633,5 @@ export class QlooMcpClient {
         correlationId: requestId,
       },
     };
-  }
-
-  public shutdown() {
-    if (this.childProcess) {
-      this.childProcess.kill();
-      this.childProcess = null;
-      this.mcpReady = false;
-    }
   }
 }

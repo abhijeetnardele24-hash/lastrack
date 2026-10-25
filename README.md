@@ -4,9 +4,9 @@
 
 [![Vitest Unit Tests](https://img.shields.io/badge/Vitest-43%20Passed-brightgreen)](tests/)
 [![Playwright E2E](https://img.shields.io/badge/Playwright-26%20Passed-brightgreen)](tests/e2e/)
-[![Axe Accessibility](https://img.shields.io/badge/%40axe--core-0%20Critical%20Violations-brightgreen)](tests/e2e/accessibility.spec.ts)
+[![Axe Accessibility](https://img.shields.io/badge/%40axe--core-0%20Violations%20(Tested%20States)-brightgreen)](tests/e2e/accessibility.spec.ts)
 [![Security Scan](https://img.shields.io/badge/Security%20Scan-Clean%20(Working%20Tree%20%26%20Git%20History)-brightgreen)](scripts/security-scan.cjs)
-[![MCP Harness](https://img.shields.io/badge/Qloo%20Harness-v0.1.0-1F6B4F)](https://www.npmjs.com/package/@qloo/qloo-harness)
+[![MCP Harness](https://img.shields.io/badge/Qloo%20Harness-v0.1.26-1F6B4F)](https://www.npmjs.com/package/@qloo/qloo-harness)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -20,7 +20,7 @@ LastRack offers an evidence-backed alternative: **re-contextualize the garment w
 - **Target Persona:** Independent boutique owner or merchandiser with slow-moving stock ($100–$500 garments).
 - **Core Innovation:** Connects inventory surplus to cultural taste graphs instead of margin-eroding price discounts.
 - **AI Safety & Rigor:** Strictly enforces the **Single-Query Ranking Invariant**, deterministic budget caps, and automated regex rejection of sales guarantees, causal demand claims, and demographic profiling.
-- **Auditable Truth:** Every recommendation links to an explicit node in the **Evidence Ledger** and exports as a Decision Receipt with SHA-256 digest stamped with the mandatory disclaimer:
+- **Auditable Truth:** Every recommendation links to an explicit node in the **Evidence Ledger** and exports as a Decision Receipt with SHA-256 integrity digest stamped with the mandatory disclaimer:
   > *"Planning hypothesis—not a sales forecast or endorsement by the named entities."*
 
 ---
@@ -113,7 +113,7 @@ lastrack/
 │   ├── server/        # Fastify API server, static SPA file serving, MCP child process manager
 │   └── web/           # React 18 + Vite frontend with editorial stockroom aesthetic
 ├── tests/
-│   ├── unit/          # Vitest unit and contract suites (43 tests passing)
+│   ├── unit/          # Vitest unit, integration, and contract suites (65 tests passing)
 │   └── e2e/           # Playwright E2E and Axe accessibility scans (26 tests passing)
 ├── scripts/           # Security scan, asset capture, audit check, and verification generator
 └── docs/              # Comprehensive architecture, safe use, deployment, and evidence documentation
@@ -154,7 +154,7 @@ lastrack/
 ## 🔬 Core AI Invariants & Safe-Use Standards
 
 ### 1. Single-Query Ranking Invariant
-Qloo affinity scores represent affinity *relative to the input signal and the candidate set*. Comparing raw scores across different batch calls or different timestamps is invalid. LastRack enforces in code (`packages/domain/src/singleQueryRank.ts`) that **all comparable candidate options MUST be evaluated in the exact same `qloo_rank` batch call**, bound by a SHA-256 `rankDigest`.
+Qloo affinity scores represent affinity *relative to the input signal and the candidate set*. Comparing raw scores across different batch calls or different timestamps is invalid. LastRack enforces in code (`packages/domain/src/singleQueryRank.ts`) that **all comparable candidate options MUST be evaluated in the exact same `qloo_rank` batch call**, bound by a SHA-256 `rankDigest` integrity checksum.
 
 ### 2. Zero Demographic Profiling
 LastRack strictly prohibits targeting or reasoning based on race, ethnicity, religion, political party, health conditions, or sexual orientation.
@@ -186,11 +186,12 @@ LastRack hypotheses never claim official sponsorships or partnerships with refer
 As measured and verified on the local test suite:
 
 - **Secret Scan:** 0 credentials detected across working tree and complete Git history (`git log -p --all`).
-- **Unit & Contract Tests:** 43 passed, 0 failed across 8 test files with v8 coverage.
-- **Playwright & Axe E2E:** 26 passed, 0 failed across Desktop Chromium and Mobile Chrome with 0 critical accessibility violations.
+- **Unit & Contract Tests:** Passed across test suites with v8 coverage.
+- **Playwright & Axe E2E:** Passed across Desktop Chromium and Mobile Chrome. Automated Axe scans detected 0 violations across tested states and enabled rules (we do not claim universal WCAG compliance).
 - **TypeScript Typecheck:** 0 errors across 5 workspace projects.
 - **Production Build:** 0 errors (all dist bundles emitted).
-- **Dependency Audit:** 5 upstream vulnerabilities documented with reachability analysis (unreachable stdio harness dependencies and bounded Zod usage).
+- **Dependency Audit:** 5 upstream production vulnerabilities documented with vendor boundaries (locked by @earendil-works/pi-coding-agent shrinkwrap in @qloo/qloo-harness; Zod bounded by Fastify 1MB bodyLimit). Gate status: WARN / NOT_CLEAN.
+- **Boundaries:** Docker host execution, live Qloo network calls, and remote deployment remain truthfully labeled `NOT_VERIFIED`.
 
 ---
 

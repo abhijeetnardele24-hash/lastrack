@@ -98,6 +98,25 @@ console.log("🔒 [LastRack Security Scan] Scanning working tree and reachable G
 const workingTreeViolations = scanDirectory(ROOT_DIR);
 const gitHistoryViolations = scanGitHistory();
 const allViolations = [...workingTreeViolations, ...gitHistoryViolations];
+const testResultsDir = path.join(ROOT_DIR, "test-results");
+if (!fs.existsSync(testResultsDir)) {
+  fs.mkdirSync(testResultsDir, { recursive: true });
+}
+
+const scanSummary = {
+  timestamp: new Date().toISOString(),
+  status: allViolations.length === 0 ? "PASSED" : "FAILED",
+  workingTreeViolations: workingTreeViolations.length,
+  gitHistoryViolations: gitHistoryViolations.length,
+  totalViolations: allViolations.length,
+  violations: allViolations,
+};
+
+fs.writeFileSync(
+  path.join(testResultsDir, "security-scan.json"),
+  JSON.stringify(scanSummary, null, 2),
+  "utf-8"
+);
 
 if (allViolations.length > 0) {
   console.error("\n❌ SECURITY SCAN FAILED! Hardcoded credentials detected:");

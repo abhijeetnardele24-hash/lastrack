@@ -44,16 +44,16 @@ LastRack acts as an editorial merchandising strategist for independent fashion r
 
 - **Monorepo Architecture:** Cleanly decoupled into `@lastrack/contracts` (Zod schemas), `@lastrack/domain` (pure business logic, validators, ablation, receipts), `@lastrack/fixtures` (curated synthetic benchmark data), `apps/server` (Fastify API with static file serving and SSE streaming), and `apps/web` (React 18 + Vite frontend).
 - **Official MCP Process Spawning:** Spawns `@qloo/qloo-harness` via local executable path (`node dist/bin.js mcp`) communicating over standard input/output (`stdio`) with JSON-RPC 2.0 (protocol version `2024-11-05`).
-- **Single-Query Ranking Invariant:** Enforced architectural rule ensuring candidate options within a domain are ranked in one batch `qloo_rank` call with score comparability preserved and bound by a SHA-256 `rankDigest`.
+- **Single-Query Ranking Invariant:** Enforced architectural rule ensuring candidate options within a domain are ranked in one batch `qloo_rank` call with score comparability preserved and bound by a SHA-256 `rankDigest` integrity checksum.
 - **Editorial Stockroom UI:** Custom Vanilla CSS design system pairing warm editorial paper tones (`#F2EFE7`), archive green (`#1F6B4F`), and terracotta accent (`#B94F32`) with accessible controls and micro-animations.
 - **Truthful Source Modes:** Transparent modes (`LIVE_QLOO`, `CACHED_QLOO`, `DEMO_FIXTURE`, `DEGRADED`, `ERROR`) ensuring zero silent fixture substitutions.
-- **Automated Verification:** 43 Vitest unit and contract tests, 26 Playwright E2E and Axe accessibility tests across Desktop Chromium and Mobile Chrome, secret scanning across working tree and Git history, and multi-stage containerization.
+- **Automated Verification:** 65 Vitest unit, integration, and contract tests, 26 Playwright E2E and Axe accessibility tests across Desktop Chromium and Mobile Chrome, secret scanning across working tree and Git history, and multi-stage containerization.
 
 ---
 
 ## Challenges We Overcame
 
-1. **Ensuring Mathematically Valid Ranking:** Qloo affinity scores reflect relative affinity against a specific query set. Comparing scores across separate API requests is statistically invalid. We solved this by designing the Single-Query Ranking Invariant: candidate options within a category are evaluated in one single batch query, with the ranked results bound via a deterministic SHA-256 digest.
+1. **Ensuring Mathematically Valid Ranking:** Qloo affinity scores reflect relative affinity against a specific query set. Comparing scores across separate API requests is statistically invalid. We solved this by designing the Single-Query Ranking Invariant: candidate options within a category are evaluated in one single batch query, with the ranked results bound via a deterministic SHA-256 integrity checksum.
 2. **Eliminating Silent Mock Fallbacks:** In complex agentic workflows, systems often silently substitute fixture data when live APIs fail. We re-engineered the controller to maintain strict source-mode truthfulness: unconfigured runs start in labeled `DEMO_FIXTURE` mode with `DEMO_FIXTURE` evidence tags, while live failures transition to `ERROR` rather than faking live data.
 3. **Designing for Independent Merchants:** Independent boutique staff do not have time for complex dashboards. We designed the interface to mimic a high-end editorial lookbook and inventory card, presenting three concrete, actionable bets that can be executed in under an hour.
 
@@ -61,7 +61,7 @@ LastRack acts as an editorial merchandising strategist for independent fashion r
 
 ## Accomplishments We're Proud Of
 
-- **Rigorous Test Suite:** 69 total tests (43 Vitest unit/contract tests + 26 Playwright E2E and Axe accessibility tests) passing with 0 failures.
+- **Rigorous Test Suite:** 91 total tests (65 Vitest unit/integration/contract tests + 26 Playwright E2E and Axe accessibility tests) passing with 0 failures.
 - **Zero Secrets Committed:** Automated security scanning verified 0 credentials or tokens committed across the working tree or reachable Git history.
 - **Truthful Source-Mode Transparency:** Visible badges and evidence tags clearly indicate whether data came from live Qloo calls or verified synthetic fixtures.
 - **Honest Ablation Benchmark:** A working "Why Qloo?" comparison that concretely demonstrates why cultural intelligence is indispensable for non-discount retail recovery.

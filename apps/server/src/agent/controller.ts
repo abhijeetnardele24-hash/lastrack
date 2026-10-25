@@ -496,17 +496,20 @@ export class BoundedAgentController {
   ): Promise<Record<string, DiscoveredEntity[]>> {
     const rankedByDomain: Record<string, DiscoveredEntity[]> = {};
     const signals = anchors.map((a) => a.name);
+    let anyDomainRankSucceeded = false;
+    let anyDomainRankFailed = false;
 
     for (const [domain, candidates] of Object.entries(candidatesByDomain)) {
       if (candidates.length === 0) continue;
       if (!this.checkBudget()) {
-        rankedByDomain[domain] = candidates;
+        this.run.warnings.push(`Call budget exceeded before ranking domain "${domain}".`);
+        this.run.sourceMode = "DEGRADED";
         continue;
       }
 
       this.run.qlooCallCount++;
       const options = candidates.map((c) => c.name);
-      const batchId = `batch_${domain}_${Date.now()}`;
+      const batchId = `batch_${domain}_${this.run.id.slice(0, 8)}`;
 
       const res = await this.qlooClient.callTool(
         "qloo_rank",
@@ -519,42 +522,101 @@ export class BoundedAgentController {
         { allowFixture: this.isExplicitFixture }
       );
 
-      const rankDigest = computeRankDigest(batchId, options);
+      // Handle every canonical status explicitly:
+      if (res.status === "error") {
+        anyDomainRankFailed = true;
+        this.run.warnings.push(`Ranking failed for domain "${domain}": ${res.error?.code || res.summary || "Upstream error"}`);
+        if (!this.isExplicitFixture) {
+          this.run.sourceMode = anyDomainRankSucceeded ? "DEGRADED" : "ERROR";
+        }
+        // Do NOT add QLOO_EVIDENCE and do NOT fabricate rank/score/batchId/rankDigest
+        continue;
+      }
 
-      // Map ranking order
+      if (res.status === "empty") {
+        this.run.warnings.push(`No ranking results returned by Qloo for domain "${domain}".`);
+        if (!this.isExplicitFixture) {
+          this.run.sourceMode = "DEGRADED";
+        }
+        continue;
+      }
+
+      if (res.status === "needs_input") {
+        this.run.warnings.push(`Ranking requires input or disambiguation for domain "${domain}": ${res.summary}`);
+        if (!this.isExplicitFixture) {
+          this.run.sourceMode = "DEGRADED";
+        }
+        continue;
+      }
+
+      // res.status === "ok" || res.status === "partial" || res.status === "degraded"
+      if (res.status === "degraded" || res.status === "partial") {
+        this.run.sourceMode = "DEGRADED";
+        this.run.warnings.push(`Ranking for domain "${domain}" completed with status "${res.status}": ${res.summary || "Partial results"}`);
+      }
+
       const rankedList: DiscoveredEntity[] = [];
+      const orderedRankResults: string[] = [];
+      const scores: number[] = [];
+
       if (Array.isArray(res.results)) {
         for (const item of res.results) {
           const optName = item.option || item.name;
           const found = candidates.find((c) => c.name.toLowerCase() === String(optName).toLowerCase());
           if (found) {
+            const assignedRank = typeof item.rank === "number" ? item.rank : rankedList.length + 1;
+            const assignedScore = typeof item.score === "number" ? item.score : found.score;
             rankedList.push({
               ...found,
-              rank: item.rank || rankedList.length + 1,
-              score: typeof item.score === "number" ? item.score : found.score,
+              rank: assignedRank,
+              score: assignedScore,
             });
+            orderedRankResults.push(found.name);
+            if (typeof assignedScore === "number") {
+              scores.push(assignedScore);
+            }
           }
         }
       }
 
-      // Fallback if results array didn't match
-      const finalRanked = rankedList.length > 0 ? rankedList : candidates;
-      rankedByDomain[domain] = finalRanked;
+      // Only if Qloo actually returned ranked candidates
+      if (rankedList.length > 0) {
+        anyDomainRankSucceeded = true;
+        const rankDigest = computeRankDigest({
+          domain,
+          orderedInputOptions: options,
+          signals,
+          orderedRankResults,
+          scores,
+          requestId: res.provenance.requestId,
+        });
 
-      this.addEvidence({
-        evidenceClass: "QLOO_EVIDENCE",
-        statement: `Qloo Single-Query Ranking (${domain.toUpperCase()} Batch #${batchId}): Ranked ${options.length} options against anchors [${signals.join(", ")}]. Top: "${finalRanked[0]?.name || options[0]}".`,
-        qlooTool: "qloo_rank",
-        requestId: res.provenance.requestId,
-        entityNames: finalRanked.map((c) => c.name),
-        sourceMode: res.provenance.sourceMode,
-      });
+        rankedByDomain[domain] = rankedList;
 
-      // Bind rankDigest to entity metadata
-      for (const ent of finalRanked) {
-        (ent as any).batchId = batchId;
-        (ent as any).rankDigest = rankDigest;
+        this.addEvidence({
+          evidenceClass: this.isExplicitFixture ? "DEMO_FIXTURE" : "QLOO_EVIDENCE",
+          statement: `Qloo Single-Query Ranking (${domain.toUpperCase()} Batch #${batchId}): Ranked ${orderedRankResults.length} options against anchors [${signals.join(", ")}]. Top: "${rankedList[0]?.name}". Integrity Checksum: ${rankDigest}.`,
+          qlooTool: "qloo_rank",
+          requestId: res.provenance.requestId,
+          entityNames: rankedList.map((c) => c.name),
+          sourceMode: res.provenance.sourceMode,
+        });
+
+        // Bind batchId and deterministic rankDigest
+        for (const ent of rankedList) {
+          (ent as any).batchId = batchId;
+          (ent as any).rankDigest = rankDigest;
+        }
+      } else {
+        this.run.warnings.push(`Ranking results for domain "${domain}" could not be mapped to candidate set.`);
+        if (!this.isExplicitFixture) {
+          this.run.sourceMode = "DEGRADED";
+        }
       }
+    }
+
+    if (!anyDomainRankSucceeded && anyDomainRankFailed && !this.isExplicitFixture) {
+      this.run.sourceMode = "ERROR";
     }
 
     return rankedByDomain;
@@ -588,6 +650,8 @@ export class BoundedAgentController {
         `Curate an in-store background audio selection evoking the mood of ${displayEntity.name}`,
       ];
 
+      const hasRankDigest = Boolean((displayEntity as any).rankDigest);
+
       plans.push({
         id: "plan-display-01",
         mechanism: "DISPLAY",
@@ -600,18 +664,22 @@ export class BoundedAgentController {
         evidenceNodeIds: evIds,
         culturalEntityNames: [displayEntity.name],
         constraintChecks: [],
-        scoreContext: {
-          withinQueryRank: displayEntity.rank || 1,
-          totalRankedInBatch: rankedEntities.movie?.length || 1,
-          batchRankCallId: (displayEntity as any).batchId,
-          rankDigest: (displayEntity as any).rankDigest,
-        },
+        scoreContext: hasRankDigest
+          ? {
+              withinQueryRank: displayEntity.rank || 1,
+              totalRankedInBatch: rankedEntities.movie?.length || rankedEntities.brand?.length || 1,
+              batchRankCallId: (displayEntity as any).batchId,
+              rankDigest: (displayEntity as any).rankDigest,
+            }
+          : undefined,
       });
     }
 
     // 2. BUNDLE Plan (derived from top brand or second entity)
     const bundleBrand = topBrand || rankedEntities.brand?.[1];
     if (bundleBrand) {
+      const hasRankDigest = Boolean((bundleBrand as any).rankDigest);
+
       plans.push({
         id: "plan-bundle-02",
         mechanism: "BUNDLE",
@@ -628,18 +696,22 @@ export class BoundedAgentController {
         evidenceNodeIds: evIds,
         culturalEntityNames: [bundleBrand.name],
         constraintChecks: [],
-        scoreContext: {
-          withinQueryRank: bundleBrand.rank || 1,
-          totalRankedInBatch: rankedEntities.brand?.length || 1,
-          batchRankCallId: (bundleBrand as any).batchId,
-          rankDigest: (bundleBrand as any).rankDigest,
-        },
+        scoreContext: hasRankDigest
+          ? {
+              withinQueryRank: bundleBrand.rank || 1,
+              totalRankedInBatch: rankedEntities.brand?.length || 1,
+              batchRankCallId: (bundleBrand as any).batchId,
+              rankDigest: (bundleBrand as any).rankDigest,
+            }
+          : undefined,
       });
     }
 
     // 3. LOCAL_ACTIVATION Plan (derived from top local place)
     const topPlace = rankedEntities.place?.[0];
     if (topPlace) {
+      const hasRankDigest = Boolean((topPlace as any).rankDigest);
+
       plans.push({
         id: "plan-local-03",
         mechanism: "LOCAL_ACTIVATION",
@@ -648,20 +720,22 @@ export class BoundedAgentController {
         actions: [
           `Host an evening sidewalk rail outside the boutique during peak weekend hours near ${topPlace.name}`,
           `Provide an exclusive postcard lookbook featuring ${this.run.brief.itemName}`,
-          "Offer an in-store acoustic evening hour with light refreshments",
+          "Offer a local event ticket receipt concession for visitors during weekend screening hours",
         ],
         estimatedCost: 350,
-        experimentMetric: "Weekend foot traffic conversion and customer inquiries",
-        stopCondition: "Halt sidewalk presence in event of rain or low foot traffic density",
+        experimentMetric: `Foot-traffic store visits during weekend screening hours near ${topPlace.name}`,
+        stopCondition: "Halt sidewalk presence if weather is inclement",
         evidenceNodeIds: evIds,
         culturalEntityNames: [topPlace.name],
         constraintChecks: [],
-        scoreContext: {
-          withinQueryRank: topPlace.rank || 1,
-          totalRankedInBatch: rankedEntities.place?.length || 1,
-          batchRankCallId: (topPlace as any).batchId,
-          rankDigest: (topPlace as any).rankDigest,
-        },
+        scoreContext: hasRankDigest
+          ? {
+              withinQueryRank: topPlace.rank || 1,
+              totalRankedInBatch: rankedEntities.place?.length || 1,
+              batchRankCallId: (topPlace as any).batchId,
+              rankDigest: (topPlace as any).rankDigest,
+            }
+          : undefined,
       });
     }
 

@@ -19,9 +19,40 @@ export interface BatchRankingResult {
   executedAt: string;
 }
 
-export function computeRankDigest(batchId: string, options: string[]): string {
-  const content = `${batchId}:${options.slice().sort().join(",")}`;
-  return `sha256:${createHash("sha256").update(content).digest("hex")}`;
+export interface RankDigestInput {
+  domain: string;
+  orderedInputOptions: string[];
+  signals: string[];
+  orderedRankResults: string[];
+  scores?: number[];
+  requestId: string;
+}
+
+/**
+ * Computes a deterministic canonical integrity digest from:
+ * 1. domain / option type
+ * 2. ordered input options
+ * 3. input signals
+ * 4. returned ordered rank results
+ * 5. returned scores when supplied
+ * 6. canonical request / correlation identifier
+ *
+ * NOTE: Never uses Date.now() or nondeterministic inputs.
+ * This is an integrity checksum/digest, not a cryptographic signature.
+ */
+export function computeRankDigest(input: RankDigestInput): string {
+  const canonicalPayload = JSON.stringify({
+    domain: String(input.domain || "").toLowerCase().trim(),
+    inputOptions: Array.isArray(input.orderedInputOptions) ? [...input.orderedInputOptions] : [],
+    signals: Array.isArray(input.signals) ? [...input.signals] : [],
+    rankedResults: Array.isArray(input.orderedRankResults) ? [...input.orderedRankResults] : [],
+    scores: Array.isArray(input.scores) && input.scores.length > 0
+      ? input.scores.map((s) => (typeof s === "number" && !isNaN(s) ? Number(s.toFixed(4)) : 0))
+      : [],
+    requestId: String(input.requestId || "").trim(),
+  });
+
+  return `sha256:${createHash("sha256").update(canonicalPayload).digest("hex")}`;
 }
 
 /**

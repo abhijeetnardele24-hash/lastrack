@@ -110,7 +110,7 @@ export function computeAblationComparison(
 ): AblationComparison {
   const ablated = generateAblatedBaseline(brief, evidenceNodes);
   const qlooEvidenceNodes = evidenceNodes.filter(
-    (n) => n.evidenceClass === "QLOO_EVIDENCE"
+    (n) => n.evidenceClass === "QLOO_EVIDENCE" || n.evidenceClass === "DEMO_FIXTURE"
   );
 
   const culturalEntities = new Set<string>();

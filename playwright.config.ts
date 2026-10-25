@@ -7,6 +7,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  outputDir: "test-results/e2e-artifacts",
   reporter: [["list"], ["json", { outputFile: "test-results/playwright-results.json" }]],
   use: {
     baseURL: "http://127.0.0.1:3001",

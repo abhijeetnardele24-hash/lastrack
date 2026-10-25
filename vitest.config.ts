@@ -6,9 +6,13 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    reporters: ["default", "json"],
+    outputFile: {
+      json: "test-results/vitest-results.json",
+    },
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html"],
+      reporter: ["text", "json", "json-summary", "html"],
       include: [
         "packages/domain/src/**/*.ts",
         "packages/contracts/src/**/*.ts",

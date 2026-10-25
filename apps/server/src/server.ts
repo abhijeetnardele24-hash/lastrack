@@ -25,13 +25,41 @@ const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const startTime = Date.now();
 
 // In-memory repository for runs with TTL cleanup
-const activeRuns = new Map<string, AgentRun>();
-const activeControllers = new Map<string, BoundedAgentController>();
+export const RUN_TTL_MS = 30 * 60 * 1000; // 30 minutes TTL for completed runs
+export const activeRuns = new Map<string, AgentRun>();
+export const activeControllers = new Map<string, BoundedAgentController>();
 
 // Seed with demo synthetic run for instant judge availability
 activeRuns.set(DEMO_AGENT_RUN.id, DEMO_AGENT_RUN);
 
-const qlooClient = new QlooMcpClient(process.env.QLOO_API_KEY);
+export const qlooClient = new QlooMcpClient(process.env.QLOO_API_KEY);
+
+let cleanupInterval: NodeJS.Timeout | null = null;
+
+export function cleanupExpiredRuns(maxAgeMs = RUN_TTL_MS, now = Date.now()): number {
+  let cleanedCount = 0;
+  for (const [id, run] of activeRuns.entries()) {
+    // Keep the seed DEMO run permanently available for demonstration
+    if (id === DEMO_AGENT_RUN.id) continue;
+
+    const isTerminal = run.state === "READY" || run.state === "ERROR" || run.state === "EMPTY" || run.state === "PARTIAL";
+    if (isTerminal) {
+      const timestampStr = run.completedAt || run.startedAt;
+      const runTime = typeof timestampStr === "string" ? new Date(timestampStr).getTime() : Number(timestampStr) || 0;
+      const age = now - runTime;
+      if (age > maxAgeMs) {
+        activeRuns.delete(id);
+        const controller = activeControllers.get(id);
+        if (controller) {
+          controller.cancel();
+          activeControllers.delete(id);
+        }
+        cleanedCount++;
+      }
+    }
+  }
+  return cleanedCount;
+}
 
 export function buildServer(): FastifyInstance {
   const server = Fastify({
@@ -42,15 +70,63 @@ export function buildServer(): FastifyInstance {
     bodyLimit: 1024 * 1024, // 1MB strict limit
   });
 
+  if (!cleanupInterval && process.env.NODE_ENV !== "test") {
+    cleanupInterval = setInterval(() => {
+      cleanupExpiredRuns();
+    }, 5 * 60 * 1000);
+    cleanupInterval.unref();
+  }
+
+  server.addHook("onClose", async () => {
+    if (cleanupInterval) {
+      clearInterval(cleanupInterval);
+      cleanupInterval = null;
+    }
+    await qlooClient.shutdown();
+  });
+
   server.register(sensible);
   server.register(cors, {
     origin: (origin, cb) => {
-      // In development or test, allow local dev servers; in production allow configured origins or same-origin
-      if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1") || origin === clientOrigin) {
+      // Allow requests with no origin (e.g. mobile apps, test runners, same-origin)
+      if (!origin) {
         cb(null, true);
         return;
       }
-      cb(null, true);
+
+      const isLocal =
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:") ||
+        origin === "http://localhost" ||
+        origin === "http://127.0.0.1";
+      const isConfiguredClient = clientOrigin && origin === clientOrigin;
+      const isAllowedConfig = process.env.ALLOWED_ORIGINS
+        ?.split(",")
+        .map((s) => s.trim())
+        .includes(origin);
+
+      if (process.env.NODE_ENV !== "production" && isLocal) {
+        cb(null, true);
+        return;
+      }
+
+      if (isConfiguredClient || isAllowedConfig) {
+        cb(null, true);
+        return;
+      }
+
+      // In production, reject unauthorized origins fail-closed
+      if (process.env.NODE_ENV === "production") {
+        cb(new Error("CORS origin not allowed"), false);
+        return;
+      }
+
+      if (isLocal) {
+        cb(null, true);
+        return;
+      }
+
+      cb(new Error("CORS origin not allowed"), false);
     },
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
@@ -129,27 +205,87 @@ export function buildServer(): FastifyInstance {
       return reply.badRequest("Anchor name is required.");
     }
 
+    const isConfigured = qlooClient.isConfigured();
     const res = await qlooClient.callTool(
       "qloo_describe",
       {
         entity: name,
         ...(expectedType ? { type: expectedType } : {}),
       },
-      { allowFixture: true }
+      { allowFixture: !isConfigured }
     );
 
+    if (res.status === "error") {
+      return reply.status(502).send({
+        error: "Bad Gateway",
+        message: res.error?.message || "Failed to resolve entity through Qloo service.",
+        status: "error",
+        recovery: {
+          suggestion: "Check Qloo API credentials or network connectivity, or verify anchor spelling.",
+          canRetry: true,
+          sourceMode: res.provenance.sourceMode,
+        },
+        provenanceId: res.provenance?.requestId,
+      });
+    }
+
+    if (res.status === "needs_input") {
+      return reply.status(422).send({
+        error: "Unprocessable Entity",
+        message: "Entity resolution requires additional disambiguation input.",
+        status: "needs_input",
+        recovery: {
+          suggestion: "Provide an explicit expectedType (e.g. 'brand', 'film', 'music') or a more specific anchor name.",
+          candidates: res.results || [],
+          canRetry: true,
+          sourceMode: res.provenance.sourceMode,
+        },
+        provenanceId: res.provenance?.requestId,
+      });
+    }
+
+    if (res.status === "empty" || (!res.results?.length && !res.data)) {
+      return reply.status(404).send({
+        error: "Not Found",
+        message: `Entity "${name}" could not be resolved in Qloo cultural catalog.`,
+        status: "empty",
+        recovery: {
+          suggestion: "Try a broader cultural anchor or verify the brand/artist name spelling.",
+          canRetry: true,
+          sourceMode: res.provenance.sourceMode,
+        },
+        provenanceId: res.provenance?.requestId,
+      });
+    }
+
     const entityData = res.results?.[0] || res.data;
-    const entityId = entityData?.entity_id || entityData?.entityId || `ent_${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
-    const resolvedName = entityData?.name || name;
+    if (!entityData || (!entityData.entity_id && !entityData.entityId && !entityData.name)) {
+      return reply.status(502).send({
+        error: "Bad Gateway",
+        message: "Malformed entity resolution response from Qloo.",
+        status: "error",
+        recovery: {
+          suggestion: "Retry with a standard cultural entity anchor.",
+          canRetry: true,
+          sourceMode: res.provenance.sourceMode,
+        },
+        provenanceId: res.provenance?.requestId,
+      });
+    }
+
+    const entityId = entityData.entity_id || entityData.entityId || `ent_${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
+    const resolvedName = entityData.name || name;
+    const confidenceState = res.provenance.sourceMode === "DEMO_FIXTURE" ? "DEMO_FIXTURE" : "CONFIRMED";
 
     return reply.status(200).send({
       resolved: {
         inputName: name,
         qlooEntityId: entityId,
         name: resolvedName,
-        entityType: entityData?.type || entityData?.entityType || expectedType || "brand",
-        confidenceState: res.status === "empty" ? "NOT_FOUND" : "CONFIRMED",
-        provenanceId: res.provenance.requestId,
+        entityType: entityData.type || entityData.entityType || expectedType || "brand",
+        confidenceState,
+        sourceMode: res.provenance.sourceMode,
+        provenanceId: res.provenance?.requestId,
       },
     });
   });

@@ -1,19 +1,19 @@
 {
   "repository": "lastrack",
-  "generatedAt": "2026-10-24T21:53:50.638Z",
-  "commitSha": "c5a10d86e4e7fdd3d085f4caa7f74c7cad7ceb83",
+  "generatedAt": "2026-10-25T09:01:44.294Z",
+  "testedCommitSha": "4ad39b9f08f7d7f3bbc474d77acccbe82d074463",
   "branch": "main",
   "canonicalQlooContract": {
     "protocolVersion": "2024-11-05",
     "contractVersion": "1.0.0",
-    "harnessPackage": "@qloo/qloo-harness@0.1.0",
+    "harnessPackage": "@qloo/qloo-harness@0.1.26",
     "checksum": "sha256:762bdcc5e14ff797b6de739d2658a83f78af35e68d7a5a3449455be6046924f5",
     "executableCommand": "node dist/bin.js mcp",
-    "supportedEntityTypes": [
-      "movie",
-      "artist",
-      "brand",
-      "place"
+    "requiredOperations": [
+      "describe",
+      "find_tags",
+      "recommend",
+      "rank"
     ],
     "supportedTools": [
       "qloo_describe",
@@ -22,54 +22,62 @@
       "qloo_rank",
       "qloo_capabilities"
     ],
+    "mcpContractTest": {
+      "timestamp": "2026-10-25T09:01:34.814Z",
+      "status": "PASSED",
+      "harnessVersion": "0.1.26",
+      "protocolVersion": "2024-11-05",
+      "canonicalChecksum": "sha256:762bdcc5e14ff797b6de739d2658a83f78af35e68d7a5a3449455be6046924f5",
+      "adapterReady": true,
+      "supportedOperations": [
+        "recommend",
+        "rank",
+        "describe",
+        "where_popular",
+        "compare_audiences",
+        "entity_tags",
+        "audience_demographics",
+        "trends",
+        "find_tags"
+      ]
+    },
     "singleQueryRankingInvariantEnforced": true,
-    "decisionReceiptDigest": "SHA-256"
+    "integrityDigestType": "SHA-256"
   },
   "qualityGates": {
     "gate1_lint": {
       "command": "npm run lint",
-      "exitCode": 0,
       "status": "PASSED",
-      "details": "ESLint 9 flat config across all TS/TSX/JS files with 0 errors and 0 warnings"
+      "details": "ESLint 9 flat config across all TS/TSX/JS files with zero errors and warnings"
     },
     "gate2_typecheck": {
       "command": "npm run typecheck",
-      "exitCode": 0,
       "status": "PASSED",
-      "details": "TypeScript 5.7 tsc -b across all 5 workspace projects with 0 errors"
+      "details": "TypeScript 5.7 tsc -b across all workspace packages with zero errors"
     },
     "gate3_unit_tests": {
       "command": "npm test",
-      "exitCode": 0,
       "status": "PASSED",
-      "testsTotal": 43,
-      "testsPassed": 43,
+      "testsTotal": 65,
+      "testsPassed": 65,
       "testsFailed": 0,
-      "coverageEngine": "v8",
-      "modulesCovered": [
-        "mcpClient.ts",
-        "controller.ts",
-        "constraintChecker.ts",
-        "singleQueryRank.ts",
-        "ablation.ts",
-        "receiptBuilder.ts",
-        "claimsValidator.ts",
-        "server.ts"
-      ]
+      "coverage": {
+        "lines": 83.34,
+        "statements": 83.34,
+        "functions": 89.13,
+        "branches": 70.28
+      }
     },
     "gate4_monorepo_build": {
       "command": "npm run build",
-      "exitCode": 0,
       "status": "PASSED",
       "artifacts": [
-        "dist/index.html",
-        "dist/assets/*.js",
-        "dist/server.js"
+        "apps/web/dist/index.html",
+        "apps/server/dist/server.js"
       ]
     },
     "gate5_playwright_e2e": {
       "command": "npm run test:e2e",
-      "exitCode": 0,
       "status": "PASSED",
       "testsTotal": 26,
       "testsPassed": 26,
@@ -77,80 +85,68 @@
       "projects": [
         "Desktop Chromium",
         "Mobile Chrome"
-      ],
-      "scenariosTested": [
-        "initial clearly labeled fixture state",
-        "brief validation and anchor input",
-        "complete explicit fixture journey to candidate plans",
-        "evidence drawer opening and chip inspection",
-        "Qloo-off ablation comparison modal",
-        "decision receipt modal and JSON export",
-        "keyboard-only navigation (Focus -> Enter -> Escape)",
-        "About / Safe-Use modal truthful disclaimers",
-        "automated @axe-core accessibility scans across 5 UI states"
       ]
     },
     "gate6_accessibility_axe": {
       "tool": "@axe-core/playwright",
-      "criticalViolations": 0,
       "status": "PASSED",
+      "totalTestedStates": 5,
+      "totalViolations": 0,
       "testedStates": [
         "initial_state",
-        "loaded_complete_interventions",
-        "ablation_comparison_modal",
-        "decision_receipt_modal",
-        "supporting_evidence_drawer"
+        "complete_state",
+        "ablation_modal",
+        "receipt_modal",
+        "evidence_drawer"
       ],
-      "disclaimer": "Automated Axe scans report 0 critical violations across tested states. We do not claim universal or uncertified WCAG compliance."
+      "statement": "Automated Axe scans detected zero violations in the tested states and enabled rules. We do not claim universal WCAG compliance."
     },
     "gate7_security_secrets": {
       "command": "npm run security-scan",
-      "exitCode": 0,
       "status": "PASSED",
-      "scope": "Working tree files AND complete reachable Git commit history (git log -p --all)",
-      "secretsDetected": 0
+      "scope": "Working tree files AND complete reachable Git commit history",
+      "totalViolations": 0
     },
     "gate8_dependency_audit": {
-      "command": "npm run audit",
-      "exitCode": 0,
-      "status": "PASSED (With documented upstream mitigations)",
+      "command": "npm audit --omit=dev --audit-level=high",
+      "status": "NOT_CLEAN",
+      "gateResult": "WARN",
       "totalVulnerabilities": 5,
       "highVulnerabilities": 3,
+      "moderateVulnerabilities": 2,
       "criticalVulnerabilities": 0,
-      "advisories": [
+      "packageChains": [
         {
           "package": "undici",
           "severity": "high",
-          "source": "@qloo/qloo-harness -> @earendil-works/pi-coding-agent",
-          "reachability": "UNREACHABLE",
-          "mitigation": "Harness is invoked strictly as a local stdio child process without processing untrusted network responses."
+          "chain": "@qloo/qloo-harness -> @earendil-works/pi-coding-agent -> undici",
+          "detail": "Outbound HTTPS requests in harness. Locked by @earendil-works/pi-coding-agent npm-shrinkwrap. Cannot be safely deduplicated without vendor update."
         },
         {
           "package": "brace-expansion",
           "severity": "high",
-          "source": "@qloo/qloo-harness -> @earendil-works/pi-coding-agent",
-          "reachability": "UNREACHABLE",
-          "mitigation": "Only used internally by pi-coding-agent CLI, not exposed to public inputs."
+          "chain": "@qloo/qloo-harness -> @earendil-works/pi-coding-agent -> brace-expansion",
+          "detail": "Locked by @earendil-works/pi-coding-agent shrinkwrap."
         },
         {
           "package": "zod",
           "severity": "high",
-          "source": "packages/contracts (zod ^3.24.4)",
           "advisory": "GHSA-mrhx-c7xc-m3w5",
-          "reachability": "MITIGATED",
-          "mitigation": "Fastify enforces 1MB body limit; input lengths are strictly validated before Zod parsing. Upgrading to Zod 4 is breaking."
+          "chain": "packages/contracts -> zod ^3.24.4",
+          "detail": "ReDoS advisory in zod < 4.6.6. Upgrading to Zod 4 is breaking. Mitigated at server edge with Fastify 1MB body limit and explicit controller array/string bounds."
         }
       ]
     }
   },
   "verificationBoundaries": {
-    "dockerStatus": "NOT_VERIFIED (Docker CLI not installed on host)",
-    "liveIntegrationStatus": "NOT_VERIFIED (No live QLOO_API_KEY configured in test session; tested via DEMO_FIXTURE and unit contract mocks)",
+    "dockerStatus": "NOT_VERIFIED (Docker daemon and container healthcheck not executed in this environment)",
+    "liveIntegrationStatus": "NOT_VERIFIED (No live QLOO_API_KEY configured in test session; verified via real child-process contract handshake and mock suite)",
     "deployment": {
-      "remoteRepositoryUrl": "https://github.com/abhijeetnardele24-hash/lastrack (Pending public creation/push)",
-      "liveProductionUrl": "NOT_VERIFIED (No remote deployment configured)",
-      "status": "LOCAL_VERIFIED"
+      "remoteRepositoryUrl": "NOT_VERIFIED (Pending remote GitHub repository creation)",
+      "ciExecutionUrl": "NOT_VERIFIED (Pending remote workflow trigger)",
+      "liveProductionUrl": "NOT_VERIFIED (No remote production deployment configured)",
+      "status": "LOCAL_VERIFIED_ONLY"
     },
-    "unverifiedNotice": "Any component not explicitly verified by passing machine execution remains labeled NOT_VERIFIED."
+    "unverifiedNotice": "All remote or live environments not executed locally remain strictly labeled NOT_VERIFIED."
   }
 }

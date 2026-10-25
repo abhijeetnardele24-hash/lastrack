@@ -19,7 +19,8 @@ export function buildDecisionReceipt(
   const evidenceTrail = run.evidence.filter((e) => linkedEvidenceIds.has(e.id));
   const exportedAt = new Date().toISOString();
 
-  const receiptPayload = `${run.id}:${plan.id}:${run.brief.itemName}:${plan.title}:${MANDATORY_DISCLAIMER}:${exportedAt}`;
+  // Deterministic integrity checksum derived from plan content, rank digest, and disclaimer
+  const receiptPayload = `${run.id}:${plan.id}:${run.brief.itemName}:${plan.title}:${MANDATORY_DISCLAIMER}:${plan.scoreContext?.rankDigest || ""}`;
   const receiptDigest = `sha256:${createHash("sha256").update(receiptPayload).digest("hex")}`;
 
   return {
@@ -131,6 +132,7 @@ export function generateReceiptHtml(receipt: DecisionReceipt): string {
     <div style="text-align: right;">
       <span class="badge">${escapeHtml(sourceMode)}</span>
       <div style="font-size: 11px; color: #4D5B55; margin-top: 4px;">Exported: ${escapeHtml(exportedAt)}</div>
+      <div style="font-size: 10px; color: #7A8982; margin-top: 2px; font-family: monospace;">Digest: ${escapeHtml((receipt.receiptDigest || "N/A").slice(0, 24))}...</div>
     </div>
   </div>
 

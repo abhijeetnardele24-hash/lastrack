@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateSingleQueryRankingInvariant } from "@lastrack/domain";
+import { validateSingleQueryRankingInvariant, computeRankDigest } from "@lastrack/domain";
 import { DEMO_AGENT_RUN } from "@lastrack/fixtures";
 import { ActivationPlan } from "@lastrack/contracts";
 
@@ -59,4 +59,87 @@ describe("singleQueryRank invariant", () => {
     expect(result.valid).toBe(true);
     expect(result.batchIds).toEqual([]);
   });
+
+  describe("computeRankDigest integrity checksum", () => {
+    const baseInput = {
+      domain: "film",
+      orderedInputOptions: ["opt-1", "opt-2"],
+      signals: ["sig-a", "sig-b"],
+      orderedRankResults: ["opt-2", "opt-1"],
+      scores: [0.95, 0.82],
+      requestId: "req-fixed-uuid-1234",
+    };
+
+    it("produces identical SHA-256 digest on repeated calls with identical inputs (determinism)", () => {
+      const digest1 = computeRankDigest(baseInput);
+      const digest2 = computeRankDigest({ ...baseInput });
+      expect(digest1).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(digest1).toBe(digest2);
+    });
+
+    it("changes digest when domain changes", () => {
+      const digest1 = computeRankDigest(baseInput);
+      const digest2 = computeRankDigest({ ...baseInput, domain: "music" });
+      expect(digest1).not.toBe(digest2);
+    });
+
+    it("changes digest when input options order changes", () => {
+      const digest1 = computeRankDigest(baseInput);
+      const digest2 = computeRankDigest({
+        ...baseInput,
+        orderedInputOptions: ["opt-2", "opt-1"],
+      });
+      expect(digest1).not.toBe(digest2);
+    });
+
+    it("changes digest when signals change", () => {
+      const digest1 = computeRankDigest(baseInput);
+      const digest2 = computeRankDigest({
+        ...baseInput,
+        signals: ["sig-a", "sig-c"],
+      });
+      expect(digest1).not.toBe(digest2);
+    });
+
+    it("changes digest when ordered results change", () => {
+      const digest1 = computeRankDigest(baseInput);
+      const digest2 = computeRankDigest({
+        ...baseInput,
+        orderedRankResults: ["opt-1", "opt-2"],
+      });
+      expect(digest1).not.toBe(digest2);
+    });
+
+    it("changes digest when scores change", () => {
+      const digest1 = computeRankDigest(baseInput);
+      const digest2 = computeRankDigest({
+        ...baseInput,
+        scores: [0.96, 0.82],
+      });
+      expect(digest1).not.toBe(digest2);
+    });
+
+    it("changes digest when correlation/request ID changes", () => {
+      const digest1 = computeRankDigest(baseInput);
+      const digest2 = computeRankDigest({
+        ...baseInput,
+        requestId: "req-fixed-uuid-5678",
+      });
+      expect(digest1).not.toBe(digest2);
+    });
+
+    it("does not embed Date.now or timestamp randomness", () => {
+      const originalNow = Date.now;
+      try {
+        Date.now = () => 1000000;
+        const d1 = computeRankDigest(baseInput);
+        Date.now = () => 99999999;
+        const d2 = computeRankDigest(baseInput);
+        expect(d1).toBe(d2);
+      } finally {
+        Date.now = originalNow;
+      }
+    });
+  });
 });
+

@@ -43,7 +43,7 @@ export const DEMO_EVIDENCE_NODES: EvidenceNode[] = [
   },
   {
     id: "ev-qloo-001",
-    evidenceClass: "QLOO_EVIDENCE",
+    evidenceClass: "DEMO_FIXTURE",
     statement: "Qloo Entity Resolution: Confirmed 'A24' (Film Studio / Media Brand), 'Phoebe Bridgers' (Musician / Songwriter), and 'Bode' (Artisanal Menswear Brand).",
     qlooTool: "qloo_describe",
     requestId: "qloo_req_resolve_001",
@@ -54,7 +54,7 @@ export const DEMO_EVIDENCE_NODES: EvidenceNode[] = [
   },
   {
     id: "ev-qloo-002",
-    evidenceClass: "QLOO_EVIDENCE",
+    evidenceClass: "DEMO_FIXTURE",
     statement: "Qloo Tag Mapping: Co-occurring aesthetic tags across anchors: 'archive fashion', 'cinematic nostalgia', 'folk melancholia', 'mid-century workwear'.",
     qlooTool: "qloo_find_tags",
     requestId: "qloo_req_tags_002",
@@ -63,7 +63,7 @@ export const DEMO_EVIDENCE_NODES: EvidenceNode[] = [
   },
   {
     id: "ev-qloo-003",
-    evidenceClass: "QLOO_EVIDENCE",
+    evidenceClass: "DEMO_FIXTURE",
     statement: "Qloo Cross-Domain Discovery: Top adjacent film affinity discovered: 'Past Lives' (dir. Celine Song, A24 release) with high cross-taste affinity to Phoebe Bridgers listeners.",
     qlooTool: "qloo_recommend",
     requestId: "qloo_req_rec_film_003",
@@ -74,7 +74,7 @@ export const DEMO_EVIDENCE_NODES: EvidenceNode[] = [
   },
   {
     id: "ev-qloo-004",
-    evidenceClass: "QLOO_EVIDENCE",
+    evidenceClass: "DEMO_FIXTURE",
     statement: "Qloo Cross-Domain Discovery: Top adjacent brand affinity: 'Toast UK' & 'Margaret Howell' (heritage utilitarian tailoring).",
     qlooTool: "qloo_recommend",
     requestId: "qloo_req_rec_brand_004",
@@ -85,7 +85,7 @@ export const DEMO_EVIDENCE_NODES: EvidenceNode[] = [
   },
   {
     id: "ev-qloo-005",
-    evidenceClass: "QLOO_EVIDENCE",
+    evidenceClass: "DEMO_FIXTURE",
     statement: "Qloo Local Culture / Place Discovery in Brooklyn, NY: Highest cultural taste overlap centered around Greenpoint/Williamsburg independent bookshop cafes: 'Word Bookstore' & 'Nitehawk Cinema'.",
     qlooTool: "qloo_where_popular",
     requestId: "qloo_req_places_005",
@@ -96,7 +96,7 @@ export const DEMO_EVIDENCE_NODES: EvidenceNode[] = [
   },
   {
     id: "ev-qloo-006",
-    evidenceClass: "QLOO_EVIDENCE",
+    evidenceClass: "DEMO_FIXTURE",
     statement: "Qloo Single-Query Batch Ranking (Batch #rank_batch_9921): Ranked 6 candidate intervention concepts against composite anchor signal in one unified call. Rank 1: 'Cinematic Workwear Editorial' (score: 0.912); Rank 2: 'Literary & Audio Bundle Pairing' (score: 0.884); Rank 3: 'Independent Cinema Screening Pop-Up Display' (score: 0.841).",
     qlooTool: "qloo_rank",
     requestId: "qloo_req_rank_batch_9921",
@@ -137,7 +137,7 @@ export const DEMO_ACTIVATION_PLANS: ActivationPlan[] = [
       withinQueryRank: 1,
       totalRankedInBatch: 6,
       batchRankCallId: "qloo_req_rank_batch_9921",
-      rankDigest: "sha256:d84f92a3bc1e07b461c9201f99c824e8a71d6205739c9f28249826a7e28b8f21",
+      rankDigest: "sha256:9fa418a3a5662384ed77327abd27ac7c412b4c7585e606b4d1ea7f208ab664a0",
     },
   },
   {
@@ -164,7 +164,7 @@ export const DEMO_ACTIVATION_PLANS: ActivationPlan[] = [
       withinQueryRank: 2,
       totalRankedInBatch: 6,
       batchRankCallId: "qloo_req_rank_batch_9921",
-      rankDigest: "sha256:d84f92a3bc1e07b461c9201f99c824e8a71d6205739c9f28249826a7e28b8f21",
+      rankDigest: "sha256:bf3165a0a09d2d0c8090245736ab94c1eaba2dafc0bc8c743d6922c96523ccad",
     },
   },
   {
@@ -191,7 +191,7 @@ export const DEMO_ACTIVATION_PLANS: ActivationPlan[] = [
       withinQueryRank: 3,
       totalRankedInBatch: 6,
       batchRankCallId: "qloo_req_rank_batch_9921",
-      rankDigest: "sha256:d84f92a3bc1e07b461c9201f99c824e8a71d6205739c9f28249826a7e28b8f21",
+      rankDigest: "sha256:e3bdcf4d8b50edc593603bd19afcd0d7008918c00dd3f7971e85497d58f2088d",
     },
   },
 ];

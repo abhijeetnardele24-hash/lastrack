@@ -23,7 +23,6 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
     await page.waitForLoadState("domcontentloaded");
 
     const accessibilityScanResults = await new AxeBuilder({ page })
-      .disableRules(["color-contrast"]) // Optional contrast rule relaxation for custom design tokens
       .analyze();
 
     scanResults["initial_state"] = {
@@ -35,7 +34,7 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
       })),
     };
 
-    expect(accessibilityScanResults.violations.filter((v) => v.impact === "critical").length).toBe(0);
+    expect(accessibilityScanResults.violations.length).toBe(0);
   });
 
   test("scan complete / loaded state with interventions", async ({ page }) => {
@@ -43,7 +42,6 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
     await page.waitForSelector("#intervention-board");
 
     const accessibilityScanResults = await new AxeBuilder({ page })
-      .disableRules(["color-contrast"])
       .analyze();
 
     scanResults["complete_state"] = {
@@ -55,7 +53,7 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
       })),
     };
 
-    expect(accessibilityScanResults.violations.filter((v) => v.impact === "critical").length).toBe(0);
+    expect(accessibilityScanResults.violations.length).toBe(0);
   });
 
   test("scan ablation modal state", async ({ page }) => {
@@ -64,7 +62,6 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
     await page.waitForSelector("#ablation-modal");
 
     const accessibilityScanResults = await new AxeBuilder({ page })
-      .disableRules(["color-contrast"])
       .analyze();
 
     scanResults["ablation_modal"] = {
@@ -76,7 +73,7 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
       })),
     };
 
-    expect(accessibilityScanResults.violations.filter((v) => v.impact === "critical").length).toBe(0);
+    expect(accessibilityScanResults.violations.length).toBe(0);
     await page.keyboard.press("Escape");
   });
 
@@ -86,7 +83,6 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
     await page.waitForSelector("#receipt-modal");
 
     const accessibilityScanResults = await new AxeBuilder({ page })
-      .disableRules(["color-contrast"])
       .analyze();
 
     scanResults["receipt_modal"] = {
@@ -98,7 +94,7 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
       })),
     };
 
-    expect(accessibilityScanResults.violations.filter((v) => v.impact === "critical").length).toBe(0);
+    expect(accessibilityScanResults.violations.length).toBe(0);
     await page.keyboard.press("Escape");
   });
 
@@ -109,7 +105,6 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
     await page.waitForSelector("#evidence-drawer");
 
     const accessibilityScanResults = await new AxeBuilder({ page })
-      .disableRules(["color-contrast"])
       .analyze();
 
     scanResults["evidence_drawer"] = {
@@ -121,6 +116,6 @@ test.describe("Automated Accessibility Scans with @axe-core/playwright", () => {
       })),
     };
 
-    expect(accessibilityScanResults.violations.filter((v) => v.impact === "critical").length).toBe(0);
+    expect(accessibilityScanResults.violations.length).toBe(0);
   });
 });
