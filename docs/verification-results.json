@@ -1,8 +1,9 @@
 {
   "repository": "lastrack",
-  "generatedAt": "2026-10-25T10:48:26.361Z",
-  "testedImplementationCommit": "a599df9aa6ef317303074734771189b4d1953b5f",
-  "evidenceCommit": "a599df9aa6ef317303074734771189b4d1953b5f",
+  "generatedAt": "2026-10-25T11:10:15.100Z",
+  "testedImplementationCommit": "2eb419191d7275472535a62de4e39bb9560b506d",
+  "artifactGeneratedFromCommit": "2eb419191d7275472535a62de4e39bb9560b506d",
+  "carrierCommitVerifiedAtRuntime": "CALCULATED_AT_RUNTIME",
   "branch": "main",
   "canonicalQlooContract": {
     "protocolVersion": "2024-11-05",
@@ -24,7 +25,6 @@
       "qloo_capabilities"
     ],
     "mcpContractTest": {
-      "timestamp": "2026-10-25T10:45:20.958Z",
       "status": "PASSED",
       "harnessVersion": "0.1.26",
       "protocolVersion": "2024-11-05",
@@ -64,7 +64,7 @@
       "status": "PASSED",
       "errorCount": 0,
       "warningCount": 0,
-      "filesChecked": 35,
+      "filesChecked": 36,
       "details": "ESLint flat config clean across all files"
     },
     "gate2_typecheck": {
@@ -83,9 +83,10 @@
     "gate3_unit_tests": {
       "command": "npm test",
       "status": "PASSED",
-      "testsTotal": 72,
-      "testsPassed": 72,
+      "testsTotal": 80,
+      "testsPassed": 80,
       "testsFailed": 0,
+      "testsSkipped": 0,
       "coverage": {
         "lines": 82.9,
         "statements": 82.9,
@@ -107,6 +108,7 @@
       "testsTotal": 26,
       "testsPassed": 26,
       "testsFailed": 0,
+      "testsSkipped": 0,
       "projects": [
         "Desktop Chromium",
         "Mobile Chrome"
