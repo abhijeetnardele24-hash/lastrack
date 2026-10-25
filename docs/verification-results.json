@@ -1,7 +1,7 @@
 {
   "repository": "lastrack",
-  "generatedAt": "2026-10-25T09:01:44.294Z",
-  "testedCommitSha": "4ad39b9f08f7d7f3bbc474d77acccbe82d074463",
+  "generatedAt": "2026-10-25T09:02:15.100Z",
+  "testedCommitSha": "60389f6cdb7e215fe706598cd5d7871c6664aa10",
   "branch": "main",
   "canonicalQlooContract": {
     "protocolVersion": "2024-11-05",
